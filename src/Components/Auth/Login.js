@@ -1,9 +1,10 @@
 // news-app-frontend/src/components/Auth/Login.js
 import React, { useState } from 'react';
 import axios from 'axios';
+import {API_URL} from '../../api'
+
 import { useNavigate, Link } from 'react-router-dom';
 
-const API_URL = 'http://127.0.0.1:8000/api/'; // Your Django API URL
 
 function Login() {
   const [username, setUsername] = useState('');

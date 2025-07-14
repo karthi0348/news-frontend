@@ -1,9 +1,9 @@
 // news-app-frontend/src/components/HomePage.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import {API_URL} from '../api'
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = 'http://127.0.0.1:8000/api/'; // Your Django API URL
 
 function HomePage() {
   const [news, setNews] = useState([]);
