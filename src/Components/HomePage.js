@@ -1,9 +1,7 @@
-// news-app-frontend/src/components/HomePage.js
-import React, { useState, useEffect } from 'react';
-import {API_URL} from '../api'
+import React, { useState, useEffect, useCallback } from 'react';
+import { API_URL } from '../api';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
 
 function HomePage() {
   const [news, setNews] = useState([]);
@@ -13,8 +11,7 @@ function HomePage() {
   const [category, setCategory] = useState('general');
   const navigate = useNavigate();
 
-  // Updated fetchNews to handle both search queries and categories
-  const fetchNews = async (query = '', selectedCategory = 'general') => {
+  const fetchNews = useCallback(async (query = '', selectedCategory = category) => {
     setLoading(true);
     setError('');
     const accessToken = localStorage.getItem('access_token');
@@ -27,14 +24,10 @@ function HomePage() {
     }
 
     try {
-      // Determine what query to send based on search input and category
       let searchTerm = '';
-      
       if (query.trim()) {
-        // If there's a search query, use it
         searchTerm = query.trim();
       } else {
-        // If no search query, use category-based search
         const categoryQueries = {
           general: 'latest news',
           business: 'business news',
@@ -42,7 +35,7 @@ function HomePage() {
           entertainment: 'entertainment news',
           health: 'health news',
           science: 'science news',
-          sports: 'sports news'
+          sports: 'sports news',
         };
         searchTerm = categoryQueries[selectedCategory] || 'latest news';
       }
@@ -53,17 +46,17 @@ function HomePage() {
         },
         params: {
           q: searchTerm,
-          pageSize: 20 // Increased to get more results
-        }
+          pageSize: 20,
+        },
       });
       setNews(response.data.articles);
     } catch (err) {
-      if (err.response && err.response.status === 401) {
+      if (err.response?.status === 401) {
         setError('Session expired or unauthorized. Please log in again.');
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         navigate('/login');
-      } else if (err.response && err.response.data) {
+      } else if (err.response?.data) {
         setError(err.response.data.detail || 'Failed to fetch news.');
       } else {
         setError('Failed to fetch news. Please try again later.');
@@ -72,11 +65,11 @@ function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, category]); // Include navigate & category if used inside
 
   useEffect(() => {
-    fetchNews('', category);
-  }, []); 
+    fetchNews();
+  }, [category, fetchNews]);
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -86,16 +79,13 @@ function HomePage() {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    // Clear search query after search to allow category filtering again
     fetchNews(searchQuery, category);
   };
 
   const handleCategoryChange = (e) => {
     const newCategory = e.target.value;
     setCategory(newCategory);
-    // Clear search query when changing category
     setSearchQuery('');
-    // Fetch news for the new category
     fetchNews('', newCategory);
   };
 
@@ -103,6 +93,14 @@ function HomePage() {
     setSearchQuery('');
     fetchNews('', category);
   };
+
+  // Loading Spinner Component
+  const LoadingSpinner = () => (
+    <div style={styles.loaderContainer}>
+      <div style={styles.spinner}></div>
+      <p style={styles.loadingText}>Loading news...</p>
+    </div>
+  );
 
   return (
     <div style={styles.container}>
@@ -147,46 +145,51 @@ function HomePage() {
         {searchQuery ? `Search Results for "${searchQuery}"` : `${category.charAt(0).toUpperCase() + category.slice(1)} News`}
       </h2>
       
-      {loading && <p style={styles.loadingText}>Loading news...</p>}
-      {error && <p style={styles.error}>{error}</p>}
-      
-      <div style={styles.newsGrid}>
-        {!loading && !error && news.length === 0 && (
-          <p style={styles.noResults}>No news found for your query.</p>
-        )}
-        {news.map((article, index) => (
-          <div key={index} style={styles.newsCard}>
-            {article.urlToImage && (
-              <img 
-                src={article.urlToImage} 
-                alt={article.title} 
-                style={styles.newsImage}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          {error && <p style={styles.error}>{error}</p>}
+          
+          <div style={styles.newsGrid}>
+            {!error && news.length === 0 && (
+              <p style={styles.noResults}>No news found for your query.</p>
             )}
-            <h3 style={styles.newsTitle}>{article.title}</h3>
-            <p style={styles.newsDescription}>{article.description}</p>
-            <div style={styles.newsMeta}>
-              <span style={styles.newsTime}>
-                {new Date(article.publishedAt).toLocaleString()}
-              </span>
-              <span style={styles.newsAuthor}>
-                {article.author || 'Unknown Author'}
-              </span>
-            </div>
-            <a 
-              href={article.url} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              style={styles.readMore}
-            >
-              Read More
-            </a>
+            {news.map((article, index) => (
+              <div key={index} style={styles.newsCard}>
+                {article.urlToImage && (
+                  <img 
+                    src={article.urlToImage} 
+                    alt={article.title} 
+                    style={styles.newsImage}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                )}
+                <h3 style={styles.newsTitle}>{article.title}</h3>
+                <p style={styles.newsDescription}>{article.description}</p>
+                <div style={styles.newsMeta}>
+                  <span style={styles.newsTime}>
+                    {new Date(article.publishedAt).toLocaleString()}
+                  </span>
+                  <span style={styles.newsAuthor}>
+                    {article.author || 'Unknown Author'}
+                  </span>
+                </div>
+                <a 
+                  href={article.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  style={styles.readMore}
+                >
+                  Read More
+                </a>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </div>
   );
 }
@@ -279,10 +282,28 @@ const styles = {
     marginBottom: '25px',
     textAlign: 'center',
   },
+  loaderContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px',
+    minHeight: '200px',
+  },
+  spinner: {
+    width: '40px',
+    height: '40px',
+    border: '4px solid #f3f3f3',
+    borderTop: '4px solid #007bff',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    marginBottom: '20px',
+  },
   loadingText: {
     textAlign: 'center',
     fontSize: '18px',
     color: '#666',
+    margin: 0,
   },
   noResults: {
     textAlign: 'center',
@@ -364,5 +385,16 @@ const styles = {
     padding: '10px',
   },
 };
+
+// Add CSS keyframes for spinner animation
+const styleSheet = document.createElement('style');
+styleSheet.type = 'text/css';
+styleSheet.innerText = `
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+`;
+document.head.appendChild(styleSheet);
 
 export default HomePage;
