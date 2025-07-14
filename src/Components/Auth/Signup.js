@@ -1,9 +1,7 @@
-// news-app-frontend/src/components/Auth/Signup.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import {API_URL} from '../../api'
 import { useNavigate, Link } from 'react-router-dom';
-
 
 function Signup() {
   const [username, setUsername] = useState('');
@@ -24,11 +22,9 @@ function Signup() {
         password,
       });
       setSuccess('Registration successful! You can now log in.');
-      // Optionally redirect to login after a delay
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       if (err.response && err.response.data) {
-        // Handle specific validation errors from Django
         const errors = err.response.data;
         let errorMessage = 'Registration failed. ';
         for (const key in errors) {
@@ -47,120 +43,141 @@ function Signup() {
   };
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.heading}>Sign Up</h2>
-      {error && <p style={styles.error}>{error}</p>}
-      {success && <p style={styles.success}>{success}</p>}
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <div style={styles.formGroup}>
-          <label htmlFor="username" style={styles.label}>Username:</label>
-          <input
-            type="text"
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            style={styles.input}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label htmlFor="email" style={styles.label}>Email:</label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={styles.input}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label htmlFor="password" style={styles.label}>Password:</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={styles.input}
-          />
-        </div>
-        <button type="submit" style={styles.button}>Sign Up</button>
-      </form>
-      <p style={styles.linkText}>
-        Already have an account? <Link to="/login" style={styles.link}>Log in here</Link>
-      </p>
+    <div className="container pt-5">
+      <div className="row">
+        <div className="col-12 d-flex justify-content-center align-items-center">
+          <div style={styles.background}>
+              <div style={styles.containerself}>
+        <h1 style={styles.heading}>Register</h1>
+        {error && <p style={styles.error}>{error}</p>}
+        {success && <p style={styles.success}>{success}</p>}
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              style={styles.input}
+            />
+          </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={styles.input}
+            />
+          </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={styles.input}
+            />
+          </div>
+          <button type="submit" style={styles.registerButton}>Register</button>
+        </form>
+        <p style={styles.linkText}>
+          Already have an account? <Link to="/login" style={styles.link}>Log In</Link>
+        </p>
+      </div>
+    </div>
+    </div>
+    </div>
     </div>
   );
 }
 
-const styles = { // Re-using styles from Login for consistency
-  container: {
-    maxWidth: '400px',
-    margin: '50px auto',
-    padding: '30px',
-    border: '1px solid #ddd',
-    borderRadius: '8px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-    backgroundColor: '#fff',
-    textAlign: 'center',
+const styles = {
+  background: {
+    width: "400px",
+    height: "fit-content",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "20px",
+    borderRadius: "10px", 
+    color: "white", 
+  },
+
+  containerself: {
+    width: "fit-content",
+    padding: "30px 20px",
+    textAlign: "center",
   },
   heading: {
-    marginBottom: '25px',
-    color: '#333',
-    fontSize: '28px',
+    color: "white",
+    fontSize: "32px",
+    fontWeight: "300",
+    marginBottom: "40px",
+    fontFamily: "Arial, sans-serif",
   },
   form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
+    display: "flex",
+    flexDirection: "column",
+    gap: "30px",
+    marginBottom: "30px",
   },
-  formGroup: {
-    textAlign: 'left',
+  inputGroup: {
+    textAlign: "left",
   },
   label: {
-    display: 'block',
-    marginBottom: '8px',
-    fontSize: '16px',
-    color: '#555',
+    color: "white",
+    fontSize: "16px",
+    fontWeight: "300",
+    marginBottom: "10px",
+    display: "block",
   },
   input: {
-    width: '100%',
-    padding: '12px',
-    border: '1px solid #ccc',
-    borderRadius: '5px',
-    fontSize: '16px',
+    width: "100%",
+    padding: "0",
+    background: "transparent",
+    border: "none",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.7)",
+    color: "white",
+    fontSize: "16px",
+    outline: "none",
+    transition: "border-color 0.3s ease",
   },
-  button: {
-    backgroundColor: '#28a745', // Different color for signup
-    color: 'white',
-    padding: '12px 20px',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    fontSize: '18px',
-    fontWeight: 'bold',
-    transition: 'background-color 0.3s ease',
-  },
-  error: {
-    color: 'red',
-    marginBottom: '15px',
-    fontSize: '14px',
-  },
-  success: {
-    color: 'green',
-    marginBottom: '15px',
-    fontSize: '14px',
+  registerButton: {
+    background: "white",
+    color: "#764ba2",
+    border: "none",
+    padding: "15px 30px",
+    borderRadius: "25px",
+    fontSize: "16px",
+    fontWeight: "500",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    marginTop: "20px",
   },
   linkText: {
-    marginTop: '20px',
-    fontSize: '15px',
-    color: '#666',
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: "14px",
+    fontWeight: "300",
   },
   link: {
-    color: '#28a745',
-    textDecoration: 'none',
-    fontWeight: 'bold',
+    color: "white",
+    textDecoration: "none",
+    fontWeight: "500",
+  },
+  error: {
+    color: "#ff6b6b",
+    background: "rgba(255, 107, 107, 0.1)",
+    padding: "10px",
+    borderRadius: "5px",
+    fontSize: "14px",
+    textAlign: "center",
+    marginBottom: "20px",
+    border: "1px solid rgba(255, 107, 107, 0.3)",
   },
 };
 

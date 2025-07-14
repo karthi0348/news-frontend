@@ -5,7 +5,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './Components/Auth/Login';
 import Signup from './Components/Auth/Signup';
-import HomePage from './Components/HomePage';
+import NewsList from './Components/NewsList.js';
+import NewsDetail from './Components/NewsDetail.js';
 import '../node_modules/bootstrap/dist/css/bootstrap.min.css'
 import '../node_modules/bootstrap/dist/js/bootstrap.min.js'
 
@@ -27,15 +28,17 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+
+           <Route path="/news/:title" element={<NewsDetail />} /> 
           <Route
             path="/"
             element={
               <PrivateRoute>
-                <HomePage />
+                <NewsList />
               </PrivateRoute>
             }
           />
-          {/* Add other routes here, maybe a general public landing page */}
+       
         </Routes>
 
       </div>

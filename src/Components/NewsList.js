@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { API_URL } from '../api';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; 
 
 function HomePage() {
   const [news, setNews] = useState([]);
@@ -65,7 +65,7 @@ function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [navigate, category]); // Include navigate & category if used inside
+  }, [navigate, category]);
 
   useEffect(() => {
     fetchNews();
@@ -94,7 +94,6 @@ function HomePage() {
     fetchNews('', category);
   };
 
-  // Loading Spinner Component
   const LoadingSpinner = () => (
     <div style={styles.loaderContainer}>
       <div style={styles.spinner}></div>
@@ -128,7 +127,7 @@ function HomePage() {
 
         <select
           value={category}
-          onChange={handleCategoryChange} 
+          onChange={handleCategoryChange}
           style={styles.categorySelect}
         >
           <option value="general">General</option>
@@ -144,13 +143,13 @@ function HomePage() {
       <h2 style={styles.sectionHeading}>
         {searchQuery ? `Search Results for "${searchQuery}"` : `${category.charAt(0).toUpperCase() + category.slice(1)} News`}
       </h2>
-      
+
       {loading ? (
         <LoadingSpinner />
       ) : (
         <>
           {error && <p style={styles.error}>{error}</p>}
-          
+
           <div style={styles.newsGrid}>
             {!error && news.length === 0 && (
               <p style={styles.noResults}>No news found for your query.</p>
@@ -158,9 +157,9 @@ function HomePage() {
             {news.map((article, index) => (
               <div key={index} style={styles.newsCard}>
                 {article.urlToImage && (
-                  <img 
-                    src={article.urlToImage} 
-                    alt={article.title} 
+                  <img
+                    src={article.urlToImage}
+                    alt={article.title}
                     style={styles.newsImage}
                     onError={(e) => {
                       e.target.style.display = 'none';
@@ -177,14 +176,13 @@ function HomePage() {
                     {article.author || 'Unknown Author'}
                   </span>
                 </div>
-                <a 
-                  href={article.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                <Link
+                  to={`/news/${encodeURIComponent(article.title.substring(0, 50))}-${index}`} 
+                  state={{ article: article }} 
                   style={styles.readMore}
                 >
                   Read More
-                </a>
+                </Link>
               </div>
             ))}
           </div>
@@ -345,7 +343,7 @@ const styles = {
     color: '#666',
     lineHeight: '1.5',
     marginBottom: '15px',
-    flexGrow: 1, 
+    flexGrow: 1,
   },
   newsMeta: {
     display: 'flex',
@@ -370,8 +368,8 @@ const styles = {
     borderRadius: '5px',
     textDecoration: 'none',
     fontSize: '14px',
-    marginTop: '10px', 
-    alignSelf: 'flex-start', 
+    marginTop: '10px',
+    alignSelf: 'flex-start',
     transition: 'background-color 0.3s ease',
   },
   error: {
@@ -386,7 +384,6 @@ const styles = {
   },
 };
 
-// Add CSS keyframes for spinner animation
 const styleSheet = document.createElement('style');
 styleSheet.type = 'text/css';
 styleSheet.innerText = `
