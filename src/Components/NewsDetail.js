@@ -1,72 +1,71 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { API_URL } from '../api';
+import axios from 'axios';
 
 const modernStyles = {
   container: {
     fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
     padding: "40px 20px",
-    maxWidth: "900px", 
-    margin: "0 auto", 
+    maxWidth: "900px",
+    margin: "0 auto",
     backgroundColor: "#ffffff",
     borderRadius: "12px",
     boxShadow: "0 6px 20px rgba(0, 0, 0, 0.08)",
-    overflow: "hidden", 
-    minHeight: "50vh", 
+    minHeight: "50vh",
     display: "flex",
-    flexDirection: "column", 
-    justifyContent: "space-between", 
-    boxSizing: "border-box", 
+    flexDirection: "column",
+    boxSizing: "border-box",
   },
-backButton: {
-  display: "inline-flex",           
-  alignItems: "center",
-  marginBottom: "20px",
-  padding: "10px 20px",               
-  backgroundColor: "#007bff",
-  color: "white",
-  textDecoration: "none",
-  borderRadius: "5px",
-  fontSize: "1em",               
-  fontWeight: "500",
-  cursor: "pointer",
-  border: "none",
-  transition: "background-color 0.3s ease, transform 0.2s ease",
-  gap: "4px",
-  flexShrink: 0,
-  width: "fit-content",            
-},
-
+  backButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    marginBottom: "20px",
+    padding: "10px 20px",
+    backgroundColor: "#007bff",
+    color: "white",
+    textDecoration: "none",
+    borderRadius: "5px",
+    fontSize: "1em",
+    fontWeight: "500",
+    cursor: "pointer",
+    border: "none",
+    transition: "background-color 0.3s ease, transform 0.2s ease",
+    gap: "4px",
+    flexShrink: 0,
+    width: "fit-content",
+  },
   backButtonHover: {
     backgroundColor: "#0056b3",
     transform: "translateY(-2px)",
   },
   image: {
     width: "100%",
-    maxHeight: "30vh", 
-    objectFit: "contain", 
+    maxHeight: "30vh",
+    objectFit: "contain",
     borderRadius: "10px",
-    marginBottom: "20px", 
+    marginBottom: "20px",
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
-    flexShrink: 0, 
+    flexShrink: 0,
   },
   title: {
-    fontSize: "2.2em", 
+    fontSize: "2.2em",
     fontWeight: "700",
     color: "#212529",
-    marginBottom: "10px", 
+    marginBottom: "10px",
     lineHeight: "1.2",
-    flexShrink: 0, 
+    flexShrink: 0,
   },
   meta: {
     display: "flex",
     flexWrap: "wrap",
-    gap: "10px 20px", 
-    fontSize: "0.85em", 
+    gap: "10px 20px",
+    fontSize: "0.85em",
     color: "#6c757d",
-    marginBottom: "20px", 
+    marginBottom: "20px",
     paddingBottom: "15px",
     borderBottom: "1px solid #e9ecef",
-    flexShrink: 0, 
+    flexShrink: 0,
   },
   metaItem: {
     display: "flex",
@@ -74,32 +73,30 @@ backButton: {
     gap: "5px",
   },
   contentArea: {
-    flexGrow: 1, 
-    overflow: "hidden", 
-    fontSize: "1em", 
+    flexGrow: 1,
+    fontSize: "1em",
     lineHeight: "1.6",
     color: "#343a40",
     whiteSpace: "pre-wrap",
-    paddingBottom: "15px", 
-    display: "flex", 
+    paddingBottom: "15px",
+    display: "flex",
     flexDirection: "column",
-    justifyContent: "space-between", 
   },
   articleContentText: {
-
+    // No changes needed here, content will flow naturally
   },
   readMoreLink: {
     display: "inline-block",
-    marginTop: "15px", 
-    padding: "10px 20px", 
+    marginTop: "15px",
+    padding: "10px 20px",
     backgroundColor: "#28a745",
     color: "white",
     textDecoration: "none",
     borderRadius: "8px",
     fontWeight: "600",
     transition: "background-color 0.3s ease, transform 0.2s ease",
-    alignSelf: "flex-start", 
-    flexShrink: 0, 
+    alignSelf: "flex-start",
+    flexShrink: 0,
   },
   readMoreLinkHover: {
     backgroundColor: "#218838",
@@ -109,25 +106,180 @@ backButton: {
     marginRight: "5px",
     color: "#007bff",
   },
+  loading: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "200px",
+    fontSize: "18px",
+    color: "#666",
+  },
+  error: {
+    color: "#dc3545",
+    textAlign: "center",
+    fontSize: "16px",
+    backgroundColor: "#f8d7da",
+    border: "1px solid #f5c6cb",
+    borderRadius: "5px",
+    padding: "10px",
+    marginBottom: "20px",
+  },
 };
 
 function NewsDetail() {
+  const { id } = useParams(); // This will be the encoded URL
   const location = useLocation();
   const navigate = useNavigate();
-  const { article } = location.state || {};
+  const [article, setArticle] = useState(location.state?.article || null);
+  const [loading, setLoading] = useState(!article);
+  const [error, setError] = useState('');
 
   const [isHovered, setIsHovered] = useState(false);
   const [isLinkHovered, setIsLinkHovered] = useState(false);
 
   useEffect(() => {
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden"; 
+    // Check authentication first
+    const accessToken = localStorage.getItem('access_token');
+    if (!accessToken) {
+      // Store the current URL to redirect back after login
+      localStorage.setItem('redirect_after_login', location.pathname);
+      navigate('/login');
+      return;
+    }
 
-    return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-    };
-  }, []);
+    // Scroll to the top of the window when the component mounts
+    window.scrollTo(0, 0);
+
+    // If article is not in state, fetch it using the URL
+    if (!article && id) {
+      fetchArticleByUrl(id, accessToken);
+    }
+  }, [id, article, navigate, location.pathname]);
+
+  const fetchArticleByUrl = async (encodedUrl, accessToken) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      // Decode the URL
+      const decodedUrl = decodeURIComponent(encodedUrl);
+      let fullUrl = decodedUrl;
+      
+      // Add protocol if missing
+      if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+        fullUrl = `https://${fullUrl}`;
+      }
+
+      // Search for the article with multiple search terms to increase chances of finding it
+      const searchTerms = ['latest news', 'breaking news', 'top stories', 'news today'];
+      let foundArticle = null;
+
+      for (const searchTerm of searchTerms) {
+        try {
+          const response = await axios.get(`${API_URL}news/`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+            params: {
+              q: searchTerm,
+              pageSize: 100,
+            },
+          });
+
+          // Find the article with matching URL
+          foundArticle = response.data.articles.find(
+            (art) => art.url === fullUrl || 
+                    art.url === decodedUrl || 
+                    art.url === `http://${decodedUrl}` || 
+                    art.url === `https://${decodedUrl}`
+          );
+
+          if (foundArticle) {
+            break;
+          }
+        } catch (searchError) {
+          console.log(`Search failed for term: ${searchTerm}`);
+          continue;
+        }
+      }
+
+      if (foundArticle) {
+        setArticle(foundArticle);
+      } else {
+        // If not found in recent articles, try a more specific search
+        // Extract domain and keywords from URL for better search
+        const urlParts = fullUrl.split('/');
+        const domain = urlParts[2];
+        const pathParts = urlParts.slice(3).join(' ').replace(/[-_]/g, ' ');
+        
+        try {
+          const response = await axios.get(`${API_URL}news/`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+            params: {
+              q: `${domain} ${pathParts}`,
+              pageSize: 50,
+            },
+          });
+
+          foundArticle = response.data.articles.find(
+            (art) => art.url === fullUrl || 
+                    art.url === decodedUrl || 
+                    art.url === `http://${decodedUrl}` || 
+                    art.url === `https://${decodedUrl}`
+          );
+
+          if (foundArticle) {
+            setArticle(foundArticle);
+          } else {
+            setError('Article not found. The link may be outdated or the article may no longer be available in recent news.');
+          }
+        } catch (specificSearchError) {
+          setError('Article not found. The link may be outdated or the article may no longer be available.');
+        }
+      }
+    } catch (err) {
+      if (err.response?.status === 401) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.setItem('redirect_after_login', location.pathname);
+        navigate('/login');
+      } else {
+        setError('Failed to fetch article. Please try again later.');
+      }
+      console.error('Article fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={modernStyles.container}>
+        <div style={modernStyles.loading}>Loading article...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={modernStyles.container}>
+        <div style={modernStyles.error}>{error}</div>
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            ...modernStyles.backButton,
+            ...(isHovered ? modernStyles.backButtonHover : {}),
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          &larr; Go Back to News
+        </button>
+      </div>
+    );
+  }
 
   if (!article) {
     return (

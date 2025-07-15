@@ -2,35 +2,89 @@ import React, { useState } from "react";
 import axios from "axios";
 import { API_URL } from "../../api";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../../App"; // Import the useAuth hook
 
 function Login() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loginMessage, setLoginMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth(); // We only need login here
 
-  const handleSubmit = async (e) => {
+  // Handle Initial Login (Email/Password Submission)
+  const handleInitialLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setLoginMessage("");
+    setIsSubmitting(true);
+
     try {
-      const response = await axios.post(`${API_URL}token/`, {
-        username,
+      const response = await axios.post(`${API_URL}login/`, {
+        email,
         password,
       });
-      localStorage.setItem("access_token", response.data.access);
-      localStorage.setItem("refresh_token", response.data.refresh);
-      console.log("Login successful:", response.data);
-      navigate("/");
+
+      if (response.data && response.data.otp_required) {
+        setLoginMessage(
+          response.data.message ||
+            "An OTP has been sent to your registered email. Please enter it to proceed."
+        );
+        // Navigate to the OTP verification page, passing the email
+        navigate("/verify-otp", { state: { emailForOtp: email } });
+      } else if (response.data && response.data.access) {
+        // Direct login if no OTP is required
+        login(response.data.access, response.data.refresh);
+        console.log("Login successful (no OTP required):", response.data);
+
+        const redirectUrl = localStorage.getItem("redirect_after_login");
+        if (redirectUrl) {
+          localStorage.removeItem("redirect_after_login");
+          navigate(redirectUrl);
+        } else {
+          navigate("/news");
+        }
+      } else {
+        setError(
+          "Unexpected successful response from the server. Please try again."
+        );
+      }
     } catch (err) {
       if (err.response && err.response.data) {
-        setError(
-          err.response.data.detail ||
-            "Login failed. Please check your credentials."
-        );
+        let errorMessage = "An error occurred. Please try again.";
+        const errorData = err.response.data;
+
+        if (typeof errorData === "object" && errorData !== null) {
+          if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.non_field_errors) {
+            errorMessage = errorData.non_field_errors.join(" ");
+          } else {
+            const fieldErrors = Object.keys(errorData)
+              .map((key) => {
+                if (Array.isArray(errorData[key])) {
+                  return `${key}: ${errorData[key].join(", ")}`;
+                }
+                return `${key}: ${errorData[key]}`;
+              })
+              .join("; ");
+            if (fieldErrors) {
+              errorMessage = `Validation Error: ${fieldErrors}`;
+            }
+          }
+        }
+        setError(errorMessage);
       } else {
-        setError("Login failed. Please try again later.");
+        setError(
+          "Login failed. Please try again later. Network error or server unreachable."
+        );
       }
       console.error("Login error:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -42,15 +96,20 @@ function Login() {
             <div style={styles.containerself}>
               <h1 style={styles.heading}>Login</h1>
               {error && <p style={styles.error}>{error}</p>}
-              <form onSubmit={handleSubmit} style={styles.form}>
+              {loginMessage && !error && (
+                <p style={styles.successMessage}>{loginMessage}</p>
+              )}
+
+              <form onSubmit={handleInitialLogin} style={styles.form}>
                 <div style={styles.inputGroup}>
-                  <label style={styles.label}>Username</label>
+                  <label style={styles.label}>Email</label>
                   <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                     style={styles.input}
+                    autoComplete="email"
                   />
                 </div>
                 <div style={styles.inputGroup}>
@@ -61,12 +120,23 @@ function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     style={styles.input}
+                    autoComplete="current-password"
                   />
                 </div>
-                <button type="submit" style={styles.loginButton}>
-                  Log In
+                <button
+                  type="submit"
+                  style={{
+                    ...styles.loginButton,
+                    ...(isSubmitting
+                      ? { opacity: 0.7, cursor: "not-allowed" }
+                      : {}),
+                  }}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Logging in..." : "Log In"}
                 </button>
               </form>
+
               <p style={styles.linkText}>
                 Don't have an account?{" "}
                 <Link to="/signup" style={styles.link}>
@@ -90,10 +160,10 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     padding: "20px",
-    borderRadius: "10px", 
-    color: "white", 
+    borderRadius: "10px",
+    color: "white",
+    boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
   },
-
   containerself: {
     width: "fit-content",
     padding: "30px 20px",
@@ -144,6 +214,7 @@ const styles = {
     cursor: "pointer",
     transition: "all 0.3s ease",
     marginTop: "20px",
+    boxShadow: "0 5px 15px rgba(0,0,0,0.2)",
   },
   linkText: {
     color: "rgba(255, 255, 255, 0.8)",
@@ -164,6 +235,16 @@ const styles = {
     textAlign: "center",
     marginBottom: "20px",
     border: "1px solid rgba(255, 107, 107, 0.3)",
+  },
+  successMessage: {
+    color: "#aaffaa",
+    background: "rgba(170, 255, 170, 0.1)",
+    padding: "10px",
+    borderRadius: "5px",
+    fontSize: "14px",
+    textAlign: "center",
+    marginBottom: "20px",
+    border: "1px solid rgba(170, 255, 170, 0.3)",
   },
 };
 

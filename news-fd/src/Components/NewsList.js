@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { API_URL } from '../api';
 import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; 
 
 function HomePage() {
   const [news, setNews] = useState([]);
@@ -24,8 +24,10 @@ function HomePage() {
     }
 
     try {
-      let searchTerm = query.trim(); // Use the provided query directly
-      if (!searchTerm) { // If no specific query, use category-based default
+      let searchTerm = '';
+      if (query.trim()) {
+        searchTerm = query.trim();
+      } else {
         const categoryQueries = {
           general: 'latest news',
           business: 'business news',
@@ -45,8 +47,6 @@ function HomePage() {
         params: {
           q: searchTerm,
           pageSize: 20,
-          // Add category param if the API supports it and you want to filter by both
-          // category: selectedCategory, // Uncomment if your API supports category filtering alongside 'q'
         },
       });
       setNews(response.data.articles);
@@ -65,12 +65,11 @@ function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [navigate, category]); // Keep category in dependency array as fetchNews uses it as fallback
+  }, [navigate, category]);
 
   useEffect(() => {
-    // Initial fetch of news based on default category or existing search query if applicable
-    fetchNews(searchQuery, category);
-  }, [category, fetchNews, searchQuery]); // Add searchQuery to useEffect dependencies
+    fetchNews();
+  }, [category, fetchNews]);
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -80,22 +79,19 @@ function HomePage() {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchNews(searchQuery, category); // Pass current searchQuery and category
+    fetchNews(searchQuery, category);
   };
 
   const handleCategoryChange = (e) => {
     const newCategory = e.target.value;
     setCategory(newCategory);
-    // DO NOT CLEAR searchQuery here.
-    // Instead, trigger a fetch with the *current* searchQuery and the *new* category.
-    fetchNews(searchQuery, newCategory);
+    setSearchQuery('');
+    fetchNews('', newCategory);
   };
 
-  const createNewsId = (newsUrl) => {
-    if (!newsUrl) return '';
-    // Remove protocol and encode the URL
-    const cleanUrl = newsUrl.replace(/^https?:\/\//, '');
-    return encodeURIComponent(cleanUrl);
+  const clearSearch = () => {
+    setSearchQuery('');
+    fetchNews('', category);
   };
 
   const LoadingSpinner = () => (
@@ -122,6 +118,11 @@ function HomePage() {
             style={styles.searchInput}
           />
           <button type="submit" style={styles.searchButton}>Search</button>
+          {searchQuery && (
+            <button type="button" onClick={clearSearch} style={styles.clearButton}>
+              Clear
+            </button>
+          )}
         </form>
 
         <select
@@ -140,7 +141,7 @@ function HomePage() {
       </div>
 
       <h2 style={styles.sectionHeading}>
-        {searchQuery ? `Search Results for "${searchQuery}" in ${category.charAt(0).toUpperCase() + category.slice(1)}` : `${category.charAt(0).toUpperCase() + category.slice(1)} News`}
+        {searchQuery ? `Search Results for "${searchQuery}"` : `${category.charAt(0).toUpperCase() + category.slice(1)} News`}
       </h2>
 
       {loading ? (
@@ -176,8 +177,8 @@ function HomePage() {
                   </span>
                 </div>
                 <Link
-                  to={`/news/${createNewsId(article.url)}`}
-                  state={{ article: article }}
+                  to={`/news/${encodeURIComponent(article.title.substring(0, 50))}-${index}`} 
+                  state={{ article: article }} 
                   style={styles.readMore}
                 >
                   Read More
@@ -197,7 +198,7 @@ const styles = {
     padding: '20px',
     maxWidth: '1200px',
     margin: '0 auto',
-
+    backgroundColor: '#f8f9fa',
     borderRadius: '8px',
     boxShadow: '0 0 10px rgba(0, 0, 0, 0.05)',
   },
@@ -255,7 +256,16 @@ const styles = {
     fontSize: '16px',
     transition: 'background-color 0.3s ease',
   },
-
+  clearButton: {
+    backgroundColor: '#6c757d',
+    color: 'white',
+    padding: '10px 15px',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    transition: 'background-color 0.3s ease',
+  },
   categorySelect: {
     padding: '10px',
     border: '1px solid #ccc',
@@ -277,9 +287,6 @@ const styles = {
     justifyContent: 'center',
     padding: '40px',
     minHeight: '200px',
-    backgroundColor: '#ffffff',
-    borderRadius: '8px',
-    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.05)',
   },
   spinner: {
     width: '40px',
