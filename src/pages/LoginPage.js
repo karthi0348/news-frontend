@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext'; 
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../api/axiosConfig'; 
@@ -14,23 +14,40 @@ const schema = yup.object().shape({
 const LoginPage = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
-    const [isSubmitting, setIsSubmitting] = useState(false); 
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { register, handleSubmit, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
     });
 
     const onSubmit = async (data) => {
-        setIsSubmitting(true); 
+        setIsSubmitting(true);
         const result = await login(data.username, data.password);
-        setIsSubmitting(false); 
+        setIsSubmitting(false);
 
         if (result.success) {
-      
-            
-                navigate('/mfa-login-verify');
+            const loginToken = localStorage.getItem('loginToken');
+            if (loginToken) {
+                try {
+                    await api.post('/auth/auth/mfa/send-otp/', {
+                        loginToken: loginToken,
+                        method: 'email', 
+                    });
+                    toast.success('OTP sent to your registered email address.');
+
+                    navigate('/mfa-login-verify', { replace: true });
+                } catch (error) {
+                    console.error('Error sending initial OTP:', error);
+                    const errorMessage = error.response?.data?.message || 'Failed to send OTP. Please try again.';
+                    toast.error(errorMessage);
+                    navigate('/mfa-login-verify', { replace: true });
+                }
+            } else {
+                toast.success('Login successful!');
+
+                navigate('/news', { replace: true });
             }
-    else {
+        } else {
             if (result.errors) {
                 result.errors.forEach(err => toast.error(err.message));
             } else {
@@ -80,7 +97,8 @@ const LoginPage = () => {
 
                     <p style={styles.linkText}>
                         Don't have an account?{" "}
-                        <Link to="/register" style={styles.link}>
+
+                        <Link to="/register" style={styles.link} replace>
                             Register
                         </Link>
                     </p>
@@ -106,25 +124,25 @@ const styles = {
         backgroundColor: '#f0f2f5',
     },
     background: {
-        maxWidth: "360px", 
-        width: '90%', 
+        maxWidth: "360px",
+        width: '90%',
         background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         display: "flex",
         flexDirection: 'column',
         alignItems: "center",
         justifyContent: "center",
-        padding: "20px", 
+        padding: "20px",
         borderRadius: "10px",
         color: "white",
-        margin: '20px auto', 
+        margin: '20px auto',
         boxSizing: 'border-box',
-        maxHeight: 'calc(100vh - 40px)', 
+        maxHeight: 'calc(100vh - 40px)',
         flexShrink: 0,
         boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
     },
     containerself: {
         width: "100%",
-        padding: "20px 20px", 
+        padding: "20px 20px",
         textAlign: "center",
         flexGrow: 1,
         boxSizing: 'border-box',
@@ -135,16 +153,16 @@ const styles = {
     },
     heading: {
         color: "white",
-        fontSize: "30px", 
+        fontSize: "30px",
         fontWeight: "300",
-        marginBottom: "35px", 
+        marginBottom: "35px",
         fontFamily: "Arial, sans-serif",
     },
     form: {
         display: "flex",
         flexDirection: "column",
-        gap: "25px", 
-        marginBottom: "25px", 
+        gap: "25px",
+        marginBottom: "25px",
         flexGrow: 1,
         justifyContent: 'center',
     },
@@ -153,19 +171,19 @@ const styles = {
     },
     label: {
         color: "white",
-        fontSize: "16px", 
+        fontSize: "16px",
         fontWeight: "300",
         marginBottom: "8px",
         display: "block",
     },
     input: {
         width: "100%",
-        padding: "0 0 8px 0", 
+        padding: "0 0 8px 0",
         background: "transparent",
         border: "none",
         borderBottom: "1px solid rgba(255, 255, 255, 0.7)",
         color: "white",
-        fontSize: "16px", 
+        fontSize: "16px",
         outline: "none",
         transition: "border-color 0.3s ease",
     },
@@ -173,21 +191,21 @@ const styles = {
         background: "white",
         color: "#764ba2",
         border: "none",
-        padding: "14px 28px", 
+        padding: "14px 28px",
         borderRadius: "25px",
-        fontSize: "16px", 
+        fontSize: "16px",
         fontWeight: "500",
         cursor: "pointer",
         transition: "all 0.3s ease",
-        marginTop: "20px", 
+        marginTop: "20px",
         boxShadow: "0 5px 15px rgba(0,0,0,0.2)",
     },
     linkText: {
         color: "rgba(255, 255, 255, 0.8)",
-        fontSize: "14px", 
+        fontSize: "14px",
         fontWeight: "300",
         marginTop: 'auto',
-        marginBottom: '8px', 
+        marginBottom: '8px',
     },
     link: {
         color: "white",
@@ -197,12 +215,12 @@ const styles = {
     error: {
         color: "#ff6b6b",
         background: "rgba(255, 107, 107, 0.1)",
-        padding: "10px", 
+        padding: "10px",
         borderRadius: "5px",
-        fontSize: "13px", 
+        fontSize: "13px",
         textAlign: "center",
         marginTop: "5px",
-        marginBottom: "18px", 
+        marginBottom: "18px",
         border: "1px solid rgba(255, 107, 107, 0.3)",
         whiteSpace: 'normal',
         wordBreak: 'break-word',

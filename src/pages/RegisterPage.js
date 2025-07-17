@@ -1,8 +1,8 @@
-import React from 'react';
-import { useForm } from 'react-hook-form'; 
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import api from '../api/axiosConfig';
+import api from '../api/axiosConfig'; // VERIFY THIS PATH IS CORRECT
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
@@ -21,14 +21,22 @@ const RegisterPage = () => {
         resolver: yupResolver(schema),
     });
 
+    // State to manage button loading state
+    const [isLoading, setIsLoading] = useState(false);
+
     const onSubmit = async (data) => {
+        setIsLoading(true); // Disable the button on submit
         try {
             const response = await api.post('/auth/register/', data);
-            if (response.data.success) {
+            if (response.data.success) { // Ensure your backend sends `success: true`
                 toast.success(response.data.message || 'Registration successful! You can now log in.');
-                setTimeout(() => navigate('/login'), 2000);
+                // --- CRITICAL CHANGE FOR HISTORY MANAGEMENT (FORM SUBMISSION) ---
+                // After successful registration, navigate to login and REPLACE the /register entry
+                // So, if history was [PageA, /register], it becomes [PageA, /login]
+                // Pressing back from /login will go to PageA, NOT /register
+                setTimeout(() => navigate('/login', { replace: true }), 2000);
             } else {
-
+                // Handle cases where backend indicates registration failed without an error status
                 toast.error(response.data.message || 'Registration failed.');
             }
         } catch (error) {
@@ -38,17 +46,17 @@ const RegisterPage = () => {
             if (backendResponse && backendResponse.errors && Array.isArray(backendResponse.errors)) {
                 backendResponse.errors.forEach(err => {
                     const fieldMap = {
-                        userName: 'userName', 
+                        userName: 'userName',
                         email: 'email',
-                        phoneNumber: 'phoneNumber', 
+                        phoneNumber: 'phoneNumber',
                     };
-                    const frontendField = fieldMap[err.field] || err.field; 
+                    const frontendField = fieldMap[err.field] || err.field;
 
                     setError(frontendField, {
-                        type: 'server', 
+                        type: 'server',
                         message: err.message,
                     });
-                    toast.error(`${err.field}: ${err.message}`); 
+                    toast.error(`${err.field}: ${err.message}`);
                 });
             } else if (backendResponse && backendResponse.message) {
                 toast.error(backendResponse.message);
@@ -59,6 +67,8 @@ const RegisterPage = () => {
             } else {
                 toast.error('An unexpected error occurred during registration. Please try again.');
             }
+        } finally {
+            setIsLoading(false); // Re-enable the button after response
         }
     };
 
@@ -124,10 +134,19 @@ const RegisterPage = () => {
                             />
                             {errors.phoneNumber && <p style={styles.error}>{errors.phoneNumber.message}</p>}
                         </div>
-                        <button type="submit" style={styles.registerButton}>Register</button>
+                        <button type="submit" style={styles.registerButton} disabled={isLoading}>
+                            {isLoading ? 'Registering...' : 'Register'}
+                        </button>
                     </form>
                     <p style={styles.linkText}>
-                        Already have an account? <Link to="/login" style={styles.link}>Log In</Link>
+                        Already have an account?{" "}
+                        {/* --- CRITICAL CHANGE FOR HISTORY MANAGEMENT (LINK) --- */}
+                        {/* When clicking this link, replace the current /register entry in history */}
+                        {/* So, if history was [PageA, /register], clicking this makes it [PageA, /login] */}
+                        {/* Pressing back from /login will go to PageA, NOT /register */}
+                        <Link to="/login" style={styles.link} replace>
+                            Log In
+                        </Link>
                     </p>
                 </div>
             </div>
@@ -243,7 +262,7 @@ const styles = {
         whiteSpace: 'normal',
         wordBreak: 'break-word',
     },
-    success: { 
+    success: {
         color: "#6bff6b",
         background: "rgba(107, 255, 107, 0.1)",
         padding: "10px",

@@ -3,7 +3,7 @@ import api from '../api/axiosConfig';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify'; 
-
+import { FaSearch } from "react-icons/fa";
 function NewsPage() {
     const [news, setNews] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -110,7 +110,7 @@ function NewsPage() {
     return (
         <div style={styles.outerContainer}>
             <div style={styles.background}>
-                <div style={styles.container}>
+                <div style={styles.containernew}>
                     <header style={styles.header}>
                         <h1 style={styles.appTitle}>News Central</h1> 
                         <button onClick={handleLogout} style={styles.logoutButton}>Logout</button>
@@ -126,7 +126,7 @@ function NewsPage() {
                                 style={styles.searchInput}
                                 autoFocus
                             />
-                            <button type="submit" style={styles.searchButton}>Search</button>
+                            <button type="submit" style={styles.searchButton}><FaSearch /></button>
                         </form>
 
                         <select
@@ -205,6 +205,7 @@ const styles = {
         alignItems: 'flex-start', 
         minHeight: '100vh',
         width: '100vw',
+        overflowX: 'hidden', // Prevent horizontal scroll
         overflowY: 'auto', 
         backgroundColor: '#f0f2f5',
     },
@@ -214,13 +215,13 @@ const styles = {
         display: "flex",
         flexDirection: 'column',
         alignItems: "center",
-        padding: "20px",
+      
         color: "white",
         boxSizing: 'border-box',
         minHeight: '100vh', 
-        boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
+        boxShadow: "0 0 20px rgba(0,0,0,0.3)",
     },
-    container: {
+    containernew: {
         width: "100%",
         maxWidth: "1200px", 
         padding: "20px",
@@ -239,6 +240,8 @@ const styles = {
         borderBottom: '1px solid rgba(255, 255, 255, 0.3)',
         paddingBottom: '15px',
         color: 'white',
+        flexWrap: 'wrap',
+        gap: '10px',
     },
     appTitle: {
         fontSize: '36px',
@@ -249,7 +252,7 @@ const styles = {
     },
     logoutButton: {
         backgroundColor: 'Red',
-        color: '#f3f3f3ff',
+        color: 'rgba(251, 250, 252, 0.92)',
         padding: '10px 18px',
         border: 'none',
         borderRadius: '25px',
@@ -274,7 +277,8 @@ const styles = {
         display: 'flex',
         gap: '10px',
         flexGrow: 1,
-        minWidth: '250px',
+        minWidth: '200px', // Adjusted for slightly smaller base
+        maxWidth: '100%', // Ensure it doesn't grow indefinitely on large screens
     },
     searchInput: {
         flexGrow: 1,
@@ -309,7 +313,7 @@ const styles = {
         fontSize: '16px',
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         color: 'white',
-        minWidth: '150px',
+        minWidth: '120px', // Adjusted for slightly smaller base
         outline: 'none',
         cursor: 'pointer',
         appearance: 'none', 
@@ -318,6 +322,7 @@ const styles = {
         backgroundPosition: 'right 10px center',
         backgroundSize: '20px',
         transition: 'border-color 0.3s ease',
+        flexShrink: 0,
     },
     sectionHeading: {
         fontSize: '28px',
@@ -364,7 +369,8 @@ const styles = {
     },
     newsGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        // Use a more flexible minmax for fluid columns, allowing more on wider screens
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
         gap: '25px',
     },
     newsCard: {
@@ -453,10 +459,196 @@ styleSheet.innerText = `
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-/* Style for option elements in select to make them readable */
+
+/* Base styles for option elements */
 select option {
     background: #764ba2; /* Darker background for options */
     color: white;
+}
+
+/* Global reset/base for better responsiveness */
+body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box; /* Crucial for responsive layouts */
+}
+*, *::before, *::after {
+    box-sizing: inherit; /* Inherit box-sizing */
+}
+
+/* Media Queries for Responsiveness */
+
+/* Extra large screens (optional, if you want specific large-screen behavior) */
+@media (min-width: 1400px) {
+    .containernew {
+        padding: 30px;
+    }
+    .appTitle {
+        font-size: 40px;
+    }
+    .newsGrid {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 30px;
+    }
+}
+
+/* Large screens (desktops) */
+@media (min-width: 992px) and (max-width: 1399px) {
+    .container {
+        padding: 25px;
+    }
+    .appTitle {
+        font-size: 38px;
+    }
+    .newsGrid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+    }
+}
+
+/* Medium screens (tablets, smaller laptops) */
+@media (min-width: 769px) and (max-width: 991px) {
+    .container {
+        padding: 15px;
+    }
+    .appTitle {
+        font-size: 32px;
+    }
+    .newsGrid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+    .newsTitle {
+        font-size: 20px;
+    }
+    .newsDescription {
+        font-size: 14px;
+    }
+}
+
+/* Small screens (tablets in portrait, large phones) */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+ 
+    .header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .appTitle {
+        font-size: 30px;
+        margin-bottom: 15px;
+    }
+    .logoutButton {
+        width: 100%; /* Make button full width */
+        max-width: 200px; /* Limit max width */
+    }
+    .controls {
+        flex-direction: column;
+        align-items: stretch; /* Stretch items to fill width */
+        gap: 15px;
+        padding: 10px;
+    }
+    .searchForm {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%; /* Make form full width */
+    }
+    .searchInput {
+        width: 100%;
+    }
+    .searchButton {
+        width: 100%;
+    }
+    .categorySelect {
+        width: 100%;
+    }
+    .sectionHeading {
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+    .newsGrid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+    .newsTitle {
+        font-size: 20px;
+    }
+    .newsDescription {
+        font-size: 14px;
+    }
+}
+
+/* Extra small screens (mobile phones) */
+@media (max-width: 480px) {
+    .container {
+        padding: 5px;
+    }
+    .appTitle {
+        font-size: 26px;
+    }
+    .logoutButton {
+        padding: 8px 15px;
+        font-size: 14px;
+    }
+    .searchInput, .searchButton, .categorySelect {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+    .sectionHeading {
+        font-size: 20px;
+        margin-bottom: 15px;
+    }
+    .newsGrid {
+        grid-template-columns: 1fr; /* Single column layout for small phones */
+        gap: 15px;
+    }
+    .newsImage {
+        height: 180px;
+    }
+    .newsTitle {
+        font-size: 18px;
+    }
+    .newsDescription {
+        font-size: 13px;
+    }
+    .readMore {
+        padding: 8px 15px;
+        font-size: 14px;
+    }
+}
+
+/* Very tiny screens (e.g., iPhone 5/SE size or smaller) */
+@media (max-width: 375px) {
+    .appTitle {
+        font-size: 22px;
+    }
+    .logoutButton {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    .searchInput, .searchButton, .categorySelect {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+    .sectionHeading {
+        font-size: 18px;
+    }
+    .newsImage {
+        height: 150px;
+    }
+    .newsTitle {
+        font-size: 16px;
+    }
+    .newsDescription {
+        font-size: 12px;
+    }
+    .readMore {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
 }
 `;
 document.head.appendChild(styleSheet);

@@ -20,7 +20,6 @@ export const AuthProvider = ({ children }) => {
                 if (storedAccessToken) {
                     const decodedToken = jwtDecode(storedAccessToken);
                     if (decodedToken.exp * 1000 < Date.now()) {
-                        console.log("Access token expired. Attempting refresh or logging out.");
                      
                         logout(); 
                     } else {

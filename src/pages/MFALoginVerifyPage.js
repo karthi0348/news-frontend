@@ -4,26 +4,20 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axiosConfig';
+import api from './../api/axiosConfig';
 import { toast } from 'react-toastify';
 
 const schema = yup.object().shape({
-    verificationCode: yup.string().max(6, 'Max 6 digits').notRequired(),
-    backupCode: yup.string().max(8, 'Max 8 characters').notRequired(),
-}).test('at-least-one-field', 'Either Verification Code or Backup Code must be provided.', function(value) {
-    return value.verificationCode || value.backupCode;
-}).test('only-one-field', 'Cannot provide both Verification Code and Backup Code.', function(value) {
-    return !(value.verificationCode && value.backupCode);
+    verificationCode: yup.string().required('Verification Code is required').max(6, 'Verification Code must be 6 digits'),
 });
 
 const MFALoginVerifyPage = () => {
     const { completeMfaLogin, isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const loginToken = localStorage.getItem('loginToken');
-    const [selectedMethod, setSelectedMethod] = useState('totp');
+
     const [isSendingCode, setIsSendingCode] = useState(false);
-    const [resendTimer, setResendTimer] = useState(0);
-    const [emailOtpSent, setEmailOtpSent] = useState(false); 
+    const [resendTimer, setResendTimer] = useState(60); 
 
     const { register, handleSubmit, formState: { errors }, reset, setError, clearErrors } = useForm({
         resolver: yupResolver(schema),
@@ -31,36 +25,40 @@ const MFALoginVerifyPage = () => {
 
     useEffect(() => {
         if (!loginToken && !isAuthenticated) {
-            navigate('/login');
+            navigate('/login', { replace: true });
         } else if (isAuthenticated) {
-            navigate('/news');
+            navigate('/news', { replace: true });
         }
     }, [loginToken, isAuthenticated, navigate]);
 
     useEffect(() => {
-        let timerInterval;
-        if (resendTimer > 0) {
-            timerInterval = setInterval(() => {
-                setResendTimer((prev) => prev - 1);
-            }, 1000);
-        } else {
-            clearInterval(timerInterval);
+        if (loginToken && !isAuthenticated) {
+            setResendTimer(60); 
         }
-        return () => clearInterval(timerInterval);
-    }, [resendTimer]);
+    }, [loginToken, isAuthenticated]);
 
     useEffect(() => {
-        if (selectedMethod === 'email' && !emailOtpSent && loginToken) {
-            requestNewOtp();
+        let timerInterval;
+        
+        if (resendTimer > 0) {
+            timerInterval = setInterval(() => {
+                setResendTimer((prev) => {
+                    if (prev <= 1) {
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
         }
-    }, [selectedMethod, emailOtpSent, loginToken]);
+        
+        return () => {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        };
+    }, [resendTimer]);
 
     const requestNewOtp = async () => {
-        if (selectedMethod === 'totp') {
-            toast.info("For Authenticator App, please generate the code from your app directly.");
-            return;
-        }
-
         if (resendTimer > 0) {
             toast.warn(`Please wait ${resendTimer} seconds before resending.`);
             return;
@@ -70,43 +68,34 @@ const MFALoginVerifyPage = () => {
         clearErrors();
 
         try {
-            console.log('Sending OTP request:', { loginToken, method: selectedMethod }); 
-            
             const response = await api.post('/auth/auth/mfa/send-otp/', {
                 loginToken: loginToken,
-                method: selectedMethod,
+                method: 'email',
             });
 
-            console.log('OTP response:', response.data); 
 
             if (response.data.success) {
-                toast.success(response.data.message || `New ${selectedMethod === 'email' ? 'email' : 'SMS'} OTP sent!`);
+                toast.success(response.data.message || 'New email OTP sent!');
+                
                 setResendTimer(60);
-                setEmailOtpSent(true); 
-                reset({ verificationCode: '', backupCode: '' });
+                
+                reset({ verificationCode: '' });
             } else {
                 toast.error(response.data.message || 'Failed to send new OTP.');
                 setError('root.sendError', { message: response.data.message || 'Failed to send new OTP.' });
             }
         } catch (error) {
-            console.error('Error requesting new OTP:', error);
-            console.error('Error response:', error.response?.data);
-            console.error('Error status:', error.response?.status);
-            
-            let errorMessage = 'Failed to send OTP. Please try again.';
-            
-            if (error.response?.data?.message) {
-                errorMessage = error.response.data.message;
-            } else if (error.response?.status === 404) {
-                errorMessage = 'OTP sending service not found. Please contact support.';
-            } else if (error.response?.status === 500) {
-                errorMessage = 'Server error. Please try again later.';
-            } else if (error.message.includes('Network Error')) {
-                errorMessage = 'Network error. Please check your connection.';
+            const backendResponse = error.response?.data;
+            if (backendResponse && backendResponse.errors && Array.isArray(backendResponse.errors)) {
+                backendResponse.errors.forEach(err => {
+                    setError(err.field, { message: err.message });
+                    toast.error(err.message);
+                });
+            } else {
+                const errorMessage = 'Failed to send OTP. Please try again.';
+                toast.error(errorMessage);
+                setError('root.sendError', { message: errorMessage });
             }
-            
-            toast.error(errorMessage);
-            setError('root.sendError', { message: errorMessage });
         } finally {
             setIsSendingCode(false);
         }
@@ -115,28 +104,21 @@ const MFALoginVerifyPage = () => {
     const onSubmit = async (data) => {
         clearErrors();
 
-        const isValid = await schema.isValid(data, { abortEarly: false });
-        if (!isValid) {
-            return;
-        }
-
         try {
             const payload = {
                 loginToken: loginToken,
-                method: selectedMethod,
-                ...(data.verificationCode && { verificationCode: data.verificationCode }),
-                ...(data.backupCode && { backupCode: data.backupCode }),
+                method: 'email',
+                verificationCode: data.verificationCode,
             };
 
-            console.log('Sending payload:', payload); 
 
             const response = await api.post('/auth/auth/mfa/verify/', payload);
 
             if (response.data.success) {
-                // toast.success(response.data.message || 'MFA verification successful!');
                 localStorage.removeItem('loginToken');
                 completeMfaLogin(response.data.data.tokens, response.data.data.user);
-                navigate('/news');
+                toast.success('MFA verification successful!');
+                navigate('/news', { replace: true });
             } else {
                 if (response.data.errors && Array.isArray(response.data.errors)) {
                     response.data.errors.forEach(err => {
@@ -144,12 +126,11 @@ const MFALoginVerifyPage = () => {
                         toast.error(err.message);
                     });
                 } else {
-                    toast.error( 'MFA verification failed.');
-                    setError('root.serverError', { message:'MFA verification failed.' });
+                    toast.error('MFA verification failed.');
+                    setError('root.serverError', { message: 'MFA verification failed.' });
                 }
             }
         } catch (error) {
-            console.error('MFA verification error:', error.response?.data);
             const backendResponse = error.response?.data;
             if (backendResponse && backendResponse.errors && Array.isArray(backendResponse.errors)) {
                 backendResponse.errors.forEach(err => {
@@ -157,19 +138,11 @@ const MFALoginVerifyPage = () => {
                     toast.error(err.message);
                 });
             } else {
-                const errorMessage =  'MFA verification failed';
+                const errorMessage = 'MFA verification failed';
                 toast.error(errorMessage);
                 setError('root.serverError', { message: errorMessage });
             }
         }
-    };
-
-    const handleMethodChange = (e) => {
-        const newMethod = e.target.value;
-        setSelectedMethod(newMethod);
-        setEmailOtpSent(false); 
-        reset({ verificationCode: '', backupCode: '' });
-        clearErrors();
     };
 
     if (!loginToken && !isAuthenticated) {
@@ -191,69 +164,31 @@ const MFALoginVerifyPage = () => {
                             {errors.root?.serverError && <p style={styles.error}>{errors.root.serverError.message}</p>}
 
                             <div style={styles.inputGroup}>
-                                <label style={styles.label}>Verification Method:</label>
-                                <select
-                                    value={selectedMethod}
-                                    onChange={handleMethodChange}
-                                    style={{ ...styles.input, padding: '8px', color: '#333', background: 'white' }}
-                                >
-                                    <option value="totp">Authenticator App (TOTP)</option>
-                                    <option value="email">Email OTP</option>
-                                </select>
-                            </div>
-
-                            {selectedMethod === 'email' && isSendingCode && (
-                                <div style={styles.infoMessage}>
-                                    Sending email OTP...
-                                </div>
-                            )}
-
-                            {selectedMethod !== 'backup' && (
-                                <div style={styles.inputGroup}>
-                                    <label style={styles.label}>
-                                        Verification Code ({selectedMethod === 'totp' ? 'from app' : 'from email'}):
-                                    </label>
-                                    <input
-                                        type="text"
-                                        {...register('verificationCode')}
-                                        maxLength="6"
-                                        style={styles.input}
-                                        placeholder={selectedMethod === 'totp' ? 'Enter 6-digit code' : 'Enter email OTP'}
-                                    />
-                                    {errors.verificationCode && <p style={styles.error}>{errors.verificationCode.message}</p>}
-                                    
-                                    {selectedMethod === 'email' && (
-                                        <button
-                                            type="button"
-                                            onClick={requestNewOtp}
-                                            disabled={isSendingCode || resendTimer > 0}
-                                            style={{ ...styles.resendButton, opacity: (isSendingCode || resendTimer > 0) ? 0.6 : 1 }}
-                                        >
-                                            {isSendingCode ? 'Sending...' : resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-
-                            <div style={styles.inputGroup}>
-                                <label style={styles.label}>Backup Code (if you lost your device):</label>
+                                <label style={styles.label}>
+                                    Please enter OTP sent to your registered email address:
+                                </label>
                                 <input
                                     type="text"
-                                    {...register('backupCode')}
-                                    maxLength="8"
+                                    {...register('verificationCode')}
+                                    maxLength="6"
                                     style={styles.input}
-                                    placeholder="Enter backup code"
+                                    placeholder="Enter 6-digit OTP"
                                 />
-                                {errors.backupCode && <p style={styles.error}>{errors.backupCode.message}</p>}
+                                {errors.verificationCode && <p style={styles.error}>{errors.verificationCode.message}</p>}
+
+                                <button
+                                    type="button"
+                                    onClick={requestNewOtp}
+                                    disabled={isSendingCode || resendTimer > 0}
+                                    style={{ ...styles.resendButton, opacity: (isSendingCode || resendTimer > 0) ? 0.6 : 1 }}
+                                >
+                                    {isSendingCode ? 'Sending...' : resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
+                                </button>
+
+           
                             </div>
 
-                            {(errors.atLeastOneField || errors.onlyOneField) && (
-                                <p style={styles.error}>
-                                    {errors.atLeastOneField?.message || errors.onlyOneField?.message}
-                                </p>
-                            )}
-
-                            <button type="submit" style={styles.loginButton}>Verify MFA</button>
+                            <button type="submit" style={styles.loginButton}>Verify OTP</button>
                         </form>
                     )}
                 </div>
@@ -365,6 +300,14 @@ const styles = {
         width: 'fit-content',
         marginLeft: 'auto',
         marginRight: 'auto',
+    },
+    timerText: {
+        color: "rgba(255, 255, 255, 0.8)",
+        fontSize: "12px",
+        fontWeight: "300",
+        marginTop: "8px",
+        textAlign: "center",
+        fontStyle: "italic",
     },
     linkText: {
         color: "rgba(255, 255, 255, 0.8)",
