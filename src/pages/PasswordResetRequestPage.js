@@ -7,11 +7,11 @@ import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 
 const schema = yup.object().shape({
-    email: yup.string().email('Invalid email').required('Email is required'),
+    email: yup.string().email('Invalid email address').required('Email address is required'),
 });
 
 const PasswordResetRequestPage = () => {
-    const { register, handleSubmit, formState: { errors } } = useForm({
+    const { register, handleSubmit, setError, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
     });
 
@@ -22,12 +22,23 @@ const PasswordResetRequestPage = () => {
     const onSubmit = async (data) => {
         setIsSubmitting(true);
         try {
-
             await api.post('/auth/password-reset-request/', data);
             toast.success('If an account with that email exists, a password reset link has been sent to it.');
         } catch (error) {
-            console.error('Password reset request error:', error.response?.data);
-            toast.error('An error occurred while processing your request. Please try again later.');
+            console.error('Password reset request error:', error); 
+
+            if (error.response && error.response.status === 400 && error.response.data.errors) {
+                Object.entries(error.response.data.errors).forEach(([field, messages]) => {
+                    setError(field, { type: 'manual', message: messages[0] });
+                });
+                toast.error('Please correct the highlighted errors.');
+            } else if (error.response) {
+                toast.error(`An error occurred: ${error.response.data.message || 'Please try again later.'}`);
+            } else if (error.request) {
+                toast.error('Network error. Please check your internet connection and try again.');
+            } else {
+                toast.error('An unexpected error occurred. Please try again later.');
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -41,12 +52,14 @@ const PasswordResetRequestPage = () => {
                     <p style={styles.description}>Enter your email address and we'll send you a link to reset your password.</p>
                     <form onSubmit={handleSubmit(onSubmit)} style={styles.form}>
                         <div style={styles.inputGroup}>
-                            <label style={styles.label}>Email:</label>
+                            <label htmlFor="email" style={styles.label}>Email:</label>
                             <input
+                                id="email" 
                                 type="email"
                                 {...register('email')}
                                 style={styles.input}
                                 autoComplete="email"
+                                placeholder="your@example.com" 
                             />
                             {errors.email && <p style={styles.error}>{errors.email.message}</p>}
                         </div>
@@ -83,6 +96,7 @@ const PasswordResetRequestPage = () => {
     );
 };
 
+// Styles remain the same, ensure they are defined correctly as they were.
 const styles = {
     outerContainer: {
         display: 'flex',
@@ -94,14 +108,14 @@ const styles = {
         backgroundColor: '#f0f2f5',
     },
     background: {
-        maxWidth: "380px", 
+        maxWidth: "380px",
         width: '90%',
         background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         display: "flex",
         flexDirection: 'column',
         alignItems: "center",
         justifyContent: "center",
-        padding: "30px", 
+        padding: "30px",
         borderRadius: "10px",
         color: "white",
         margin: '20px auto',
@@ -125,13 +139,13 @@ const styles = {
         color: "white",
         fontSize: "30px",
         fontWeight: "300",
-        marginBottom: "20px", 
+        marginBottom: "20px",
         fontFamily: "Arial, sans-serif",
     },
     description: {
         color: "rgba(255, 255, 255, 0.85)",
         fontSize: "15px",
-        marginBottom: "30px", 
+        marginBottom: "30px",
         lineHeight: "1.5",
         fontWeight: "300",
     },
@@ -199,7 +213,7 @@ const styles = {
         transition: "color 0.3s ease",
     },
     linkHover: {
-        color: "#d0d0d0", 
+        color: "#d0d0d0",
     },
     error: {
         color: "#ff6b6b",

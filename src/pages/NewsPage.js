@@ -248,8 +248,8 @@ const styles = {
         fontFamily: "Arial, sans-serif",
     },
     logoutButton: {
-        backgroundColor: 'white',
-        color: '#764ba2',
+        backgroundColor: 'Red',
+        color: '#f3f3f3ff',
         padding: '10px 18px',
         border: 'none',
         borderRadius: '25px',

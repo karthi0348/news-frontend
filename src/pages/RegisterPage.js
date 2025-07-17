@@ -158,7 +158,6 @@ const styles = {
         color: "white",
         margin: '10px auto',
         boxSizing: 'border-box',
-        maxHeight: 'calc(100vh - 20px)',
         flexShrink: 0,
     },
     containerself: {
@@ -233,7 +232,7 @@ const styles = {
     },
     error: {
         color: "#ff6b6b",
-        background: "rgba(255, 107, 107, 0.1)",
+        background: "rgba(246, 242, 242)",
         padding: "5px",
         borderRadius: "5px",
         fontSize: "11px",

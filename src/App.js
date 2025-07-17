@@ -27,7 +27,7 @@ function AppRoutes() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/password-reset-request" element={<PasswordResetRequestPage />} />
-            <Route path="/password-reset" element={<PasswordResetVerifyPage />} />
+            <Route path="/auth/password-reset" element={<PasswordResetVerifyPage />} />
             <Route path="/mfa-login-verify" element={<MFALoginVerifyPage />} />
 
             <Route
