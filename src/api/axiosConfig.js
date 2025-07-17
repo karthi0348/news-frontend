@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 
-const API_BASE_URL = 'https://bqhktxjd-8000.inc1.devtunnels.ms/';
+const API_BASE_URL = 'https://news-backend-jxwy.vercel.app';
 
 const api = axios.create({
     baseURL: API_BASE_URL,

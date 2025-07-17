@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext'; 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -13,43 +13,60 @@ import PasswordResetVerifyPage from './pages/PasswordResetVerifyPage';
 import NewsPage from './pages/NewsPage';
 import NewsDetail from './pages/NewsDetail';
 
-const PrivateRoute = ({ children }) => {
-    const { isAuthenticated} = useAuth();
+import PrivateRoute from './components/PrivateRoute';
+import PublicOnlyRoute from './components/PublicOnlyRoute';
 
-    return isAuthenticated ? children : <Navigate to="/login" />;
+
+const HomeRedirect = () => {
+    const { isAuthenticated, loading } = useAuth(); 
+
+    if (loading) {
+        return <div>Loading...</div>; 
+    }
+
+    return isAuthenticated ? <Navigate to="/news" replace /> : <Navigate to="/login" replace />;
 };
 
-function AppRoutes() {
-    const { isAuthenticated} = useAuth(); 
-
-    return (
-        <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/password-reset-request" element={<PasswordResetRequestPage />} />
-            <Route path="/auth/password-reset" element={<PasswordResetVerifyPage />} />
-            <Route path="/mfa-login-verify" element={<MFALoginVerifyPage />} />
-
-            <Route
-                path="/"
-                element={isAuthenticated ? <Navigate to="/news" /> : <Navigate to="/login" />}
-            />
-
-            <Route path="/mfa-setup" element={<PrivateRoute><MFASetupPage /></PrivateRoute>} />
-            <Route path="/news" element={<PrivateRoute><NewsPage /></PrivateRoute>} />
-            <Route path="/news/:newsId" element={<PrivateRoute><NewsDetail /></PrivateRoute>} />
-
-            <Route path="*" element={<div>404 Not Found</div>} />
-        </Routes>
-    );
-}
 
 function App() {
     return (
         <Router>
             <AuthProvider>
-                <AppRoutes />
-                <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
+                <Routes>
+                    {/* Public-only routes: Accessible ONLY when NOT authenticated */}
+                    <Route element={<PublicOnlyRoute />}>
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<RegisterPage />} />
+                        <Route path="/password-reset-request" element={<PasswordResetRequestPage />} />
+                        <Route path="/auth/password-reset" element={<PasswordResetVerifyPage />} />
+                        <Route path="/mfa-login-verify" element={<MFALoginVerifyPage />} />
+                    </Route>
+
+                    {/* Private routes: Accessible ONLY when AUTHENTICATED */}
+                    <Route element={<PrivateRoute />}>
+                        <Route path="/news" element={<NewsPage />} />
+                        <Route path="/news/:newsId" element={<NewsDetail />} />
+                        <Route path="/mfa-setup" element={<MFASetupPage />} />
+                    </Route>
+
+                    <Route
+                        path="/"
+                        element={<HomeRedirect />}
+                    />
+
+                    <Route path="*" element={<div>404 Not Found</div>} />
+                </Routes>
+                <ToastContainer
+                    position="bottom-right"
+                    autoClose={3000}
+                    hideProgressBar={false}
+                    newestOnTop={false}
+                    closeOnClick
+                    rtl={false}
+                    pauseOnFocusLoss
+                    draggable
+                    pauseOnHover
+                />
             </AuthProvider>
         </Router>
     );

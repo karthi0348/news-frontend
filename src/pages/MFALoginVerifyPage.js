@@ -8,7 +8,10 @@ import api from './../api/axiosConfig';
 import { toast } from 'react-toastify';
 
 const schema = yup.object().shape({
-    verificationCode: yup.string().required('Verification Code is required').max(6, 'Verification Code must be 6 digits'),
+    verificationCode: yup
+        .string()
+        .required('Verification Code is required')
+        .max(6, 'Verification Code must be 6 digits'),
 });
 
 const MFALoginVerifyPage = () => {
@@ -17,9 +20,17 @@ const MFALoginVerifyPage = () => {
     const loginToken = localStorage.getItem('loginToken');
 
     const [isSendingCode, setIsSendingCode] = useState(false);
-    const [resendTimer, setResendTimer] = useState(60); 
+    const [resendTimer, setResendTimer] = useState(60);
+    const [isVerifying, setIsVerifying] = useState(false); // NEW STATE
 
-    const { register, handleSubmit, formState: { errors }, reset, setError, clearErrors } = useForm({
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+        reset,
+        setError,
+        clearErrors,
+    } = useForm({
         resolver: yupResolver(schema),
     });
 
@@ -33,24 +44,22 @@ const MFALoginVerifyPage = () => {
 
     useEffect(() => {
         if (loginToken && !isAuthenticated) {
-            setResendTimer(60); 
+            setResendTimer(60);
         }
     }, [loginToken, isAuthenticated]);
 
     useEffect(() => {
         let timerInterval;
-        
+
         if (resendTimer > 0) {
             timerInterval = setInterval(() => {
                 setResendTimer((prev) => {
-                    if (prev <= 1) {
-                        return 0;
-                    }
+                    if (prev <= 1) return 0;
                     return prev - 1;
                 });
             }, 1000);
         }
-        
+
         return () => {
             if (timerInterval) {
                 clearInterval(timerInterval);
@@ -73,28 +82,27 @@ const MFALoginVerifyPage = () => {
                 method: 'email',
             });
 
-
             if (response.data.success) {
                 toast.success(response.data.message || 'New email OTP sent!');
-                
                 setResendTimer(60);
-                
                 reset({ verificationCode: '' });
             } else {
                 toast.error(response.data.message || 'Failed to send new OTP.');
-                setError('root.sendError', { message: response.data.message || 'Failed to send new OTP.' });
+                setError('root.sendError', {
+                    message: response.data.message || 'Failed to send new OTP.',
+                });
             }
         } catch (error) {
             const backendResponse = error.response?.data;
-            if (backendResponse && backendResponse.errors && Array.isArray(backendResponse.errors)) {
-                backendResponse.errors.forEach(err => {
+            if (backendResponse?.errors?.length) {
+                backendResponse.errors.forEach((err) => {
                     setError(err.field, { message: err.message });
                     toast.error(err.message);
                 });
             } else {
-                const errorMessage = 'Failed to send OTP. Please try again.';
-                toast.error(errorMessage);
-                setError('root.sendError', { message: errorMessage });
+                const msg = 'Failed to send OTP. Please try again.';
+                toast.error(msg);
+                setError('root.sendError', { message: msg });
             }
         } finally {
             setIsSendingCode(false);
@@ -102,6 +110,9 @@ const MFALoginVerifyPage = () => {
     };
 
     const onSubmit = async (data) => {
+        if (isVerifying) return; // Prevent double-click
+
+        setIsVerifying(true);
         clearErrors();
 
         try {
@@ -111,17 +122,15 @@ const MFALoginVerifyPage = () => {
                 verificationCode: data.verificationCode,
             };
 
-
             const response = await api.post('/auth/auth/mfa/verify/', payload);
 
             if (response.data.success) {
                 localStorage.removeItem('loginToken');
                 completeMfaLogin(response.data.data.tokens, response.data.data.user);
-                toast.success('MFA verification successful!');
                 navigate('/news', { replace: true });
             } else {
-                if (response.data.errors && Array.isArray(response.data.errors)) {
-                    response.data.errors.forEach(err => {
+                if (response.data.errors?.length) {
+                    response.data.errors.forEach((err) => {
                         setError(err.field, { message: err.message });
                         toast.error(err.message);
                     });
@@ -132,8 +141,8 @@ const MFALoginVerifyPage = () => {
             }
         } catch (error) {
             const backendResponse = error.response?.data;
-            if (backendResponse && backendResponse.errors && Array.isArray(backendResponse.errors)) {
-                backendResponse.errors.forEach(err => {
+            if (backendResponse?.errors?.length) {
+                backendResponse.errors.forEach((err) => {
                     setError(err.field, { message: err.message });
                     toast.error(err.message);
                 });
@@ -142,60 +151,74 @@ const MFALoginVerifyPage = () => {
                 toast.error(errorMessage);
                 setError('root.serverError', { message: errorMessage });
             }
+        } finally {
+            setIsVerifying(false);
         }
     };
 
-    if (!loginToken && !isAuthenticated) {
-        return null;
-    }
-    if (isAuthenticated) {
-        return null;
-    }
+    if (!loginToken || isAuthenticated) return null;
 
     return (
         <div style={styles.outerContainer}>
             <div style={styles.background}>
                 <div style={styles.containerself}>
                     <h1 style={styles.heading}>MFA Verification</h1>
-                    {!loginToken && <p style={styles.linkText}>Please login first to initiate MFA verification.</p>}
-                    {loginToken && (
-                        <form onSubmit={handleSubmit(onSubmit)} style={styles.form}>
-                            {errors.root?.sendError && <p style={styles.error}>{errors.root.sendError.message}</p>}
-                            {errors.root?.serverError && <p style={styles.error}>{errors.root.serverError.message}</p>}
 
-                            <div style={styles.inputGroup}>
-                                <label style={styles.label}>
-                                    Please enter OTP sent to your registered email address:
-                                </label>
-                                <input
-                                    type="text"
-                                    {...register('verificationCode')}
-                                    maxLength="6"
-                                    style={styles.input}
-                                    placeholder="Enter 6-digit OTP"
-                                />
-                                {errors.verificationCode && <p style={styles.error}>{errors.verificationCode.message}</p>}
+                    <form onSubmit={handleSubmit(onSubmit)} style={styles.form}>
+                        {errors.root?.sendError && <p style={styles.error}>{errors.root.sendError.message}</p>}
+                        {errors.root?.serverError && <p style={styles.error}>{errors.root.serverError.message}</p>}
 
-                                <button
-                                    type="button"
-                                    onClick={requestNewOtp}
-                                    disabled={isSendingCode || resendTimer > 0}
-                                    style={{ ...styles.resendButton, opacity: (isSendingCode || resendTimer > 0) ? 0.6 : 1 }}
-                                >
-                                    {isSendingCode ? 'Sending...' : resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
-                                </button>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>
+                                Please enter OTP sent to your registered email address:
+                            </label>
+                            <input
+                                type="text"
+                                {...register('verificationCode')}
+                                maxLength="6"
+                                style={styles.input}
+                                placeholder="Enter 6-digit OTP"
+                            />
+                            {errors.verificationCode && (
+                                <p style={styles.error}>{errors.verificationCode.message}</p>
+                            )}
 
-           
-                            </div>
+                            <button
+                                type="button"
+                                onClick={requestNewOtp}
+                                disabled={isSendingCode || resendTimer > 0}
+                                style={{
+                                    ...styles.resendButton,
+                                    opacity: (isSendingCode || resendTimer > 0) ? 0.6 : 1,
+                                    cursor: (isSendingCode || resendTimer > 0) ? 'not-allowed' : 'pointer',
+                                }}
+                            >
+                                {isSendingCode
+                                    ? 'Sending...'
+                                    : resendTimer > 0
+                                    ? `Resend in ${resendTimer}s`
+                                    : 'Resend Code'}
+                            </button>
+                        </div>
 
-                            <button type="submit" style={styles.loginButton}>Verify OTP</button>
-                        </form>
-                    )}
+                        <button
+                            type="submit"
+                            style={{
+                                ...styles.loginButton,
+                                opacity: isVerifying ? 0.6 : 1,
+                                cursor: isVerifying ? 'not-allowed' : 'pointer',
+                            }}
+                            disabled={isVerifying}
+                        >
+                            {isVerifying ? 'Verifying...' : 'Verify OTP'}
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
     );
 };
+
 
 const styles = {
     outerContainer: {

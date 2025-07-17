@@ -2,18 +2,21 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../api/axiosConfig';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { toast } from 'react-toastify'; 
+import { toast } from 'react-toastify';
 import { FaSearch } from "react-icons/fa";
+
 function NewsPage() {
     const [news, setNews] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    // State to hold the *actual* query used for fetching, distinct from the input field
+    const [activeSearchQuery, setActiveSearchQuery] = useState('');
     const [category, setCategory] = useState('general');
     const navigate = useNavigate();
     const { isAuthenticated, accessToken, logout } = useAuth();
 
-    const fetchNews = useCallback(async (query = '', selectedCategory = category) => {
+    const fetchNews = useCallback(async (query, selectedCategory) => {
         setLoading(true);
         setError('');
 
@@ -67,15 +70,16 @@ function NewsPage() {
         } finally {
             setLoading(false);
         }
-    }, [navigate, category, isAuthenticated, accessToken, logout]);
+    }, [navigate, isAuthenticated, accessToken, logout]);
 
+    // This useEffect handles initial load and changes to activeSearchQuery or category
     useEffect(() => {
         if (isAuthenticated) {
-            fetchNews(searchQuery, category);
+            fetchNews(activeSearchQuery, category);
         } else {
             navigate('/login');
         }
-    }, [category, fetchNews, searchQuery, isAuthenticated, navigate]);
+    }, [activeSearchQuery, category, isAuthenticated, navigate, fetchNews]); // Added fetchNews to dependencies
 
     const handleLogout = () => {
         logout();
@@ -85,13 +89,15 @@ function NewsPage() {
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
-        fetchNews(searchQuery, category);
+        // Update activeSearchQuery when search button is pressed
+        setActiveSearchQuery(searchQuery);
     };
 
     const handleCategoryChange = (e) => {
         const newCategory = e.target.value;
         setCategory(newCategory);
-        fetchNews(searchQuery, newCategory);
+        // Category change should trigger news fetch with current active search query
+        // activeSearchQuery will be used by the useEffect due to its dependency
     };
 
     const createNewsId = (newsUrl) => {
@@ -112,7 +118,7 @@ function NewsPage() {
             <div style={styles.background}>
                 <div style={styles.containernew}>
                     <header style={styles.header}>
-                        <h1 style={styles.appTitle}>News Central</h1> 
+                        <h1 style={styles.appTitle}>News Central</h1>
                         <button onClick={handleLogout} style={styles.logoutButton}>Logout</button>
                     </header>
 
@@ -145,7 +151,7 @@ function NewsPage() {
                     </div>
 
                     <h2 style={styles.sectionHeading}>
-                        {searchQuery ? `Search Results for "${searchQuery}" in ${category.charAt(0).toUpperCase() + category.slice(1)}` : `${category.charAt(0).toUpperCase() + category.slice(1)} News`}
+                        {activeSearchQuery ? `Search Results for "${activeSearchQuery}" in ${category.charAt(0).toUpperCase() + category.slice(1)}` : `${category.charAt(0).toUpperCase() + category.slice(1)} News`}
                     </h2>
 
                     {loading ? (
@@ -202,33 +208,32 @@ const styles = {
     outerContainer: {
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'flex-start', 
+        alignItems: 'flex-start',
         minHeight: '100vh',
         width: '100vw',
-        overflowX: 'hidden', // Prevent horizontal scroll
-        overflowY: 'auto', 
+        overflowX: 'hidden',
+        overflowY: 'auto',
         backgroundColor: '#f0f2f5',
     },
     background: {
-        width: '100%', 
+        width: '100%',
         background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         display: "flex",
         flexDirection: 'column',
         alignItems: "center",
-      
         color: "white",
         boxSizing: 'border-box',
-        minHeight: '100vh', 
+        minHeight: '100vh',
         boxShadow: "0 0 20px rgba(0,0,0,0.3)",
     },
     containernew: {
         width: "100%",
-        maxWidth: "1200px", 
+        maxWidth: "1200px",
         padding: "20px",
         textAlign: "center",
         flexGrow: 1,
         boxSizing: 'border-box',
-        backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         borderRadius: '10px',
         boxShadow: "0 5px 15px rgba(0,0,0,0.1)",
     },
@@ -277,8 +282,8 @@ const styles = {
         display: 'flex',
         gap: '10px',
         flexGrow: 1,
-        minWidth: '200px', // Adjusted for slightly smaller base
-        maxWidth: '100%', // Ensure it doesn't grow indefinitely on large screens
+        minWidth: '200px',
+        maxWidth: '100%',
     },
     searchInput: {
         flexGrow: 1,
@@ -313,10 +318,10 @@ const styles = {
         fontSize: '16px',
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         color: 'white',
-        minWidth: '120px', // Adjusted for slightly smaller base
+        minWidth: '120px',
         outline: 'none',
         cursor: 'pointer',
-        appearance: 'none', 
+        appearance: 'none',
         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E")`,
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'right 10px center',
@@ -369,8 +374,7 @@ const styles = {
     },
     newsGrid: {
         display: 'grid',
-        // Use a more flexible minmax for fluid columns, allowing more on wider screens
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
         gap: '25px',
     },
     newsCard: {
@@ -382,7 +386,7 @@ const styles = {
         flexDirection: 'column',
         justifyContent: 'space-between',
         transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-        overflow: 'hidden', 
+        overflow: 'hidden',
     },
     newsImage: {
         width: '100%',
@@ -531,7 +535,7 @@ body {
     .container {
         padding: 10px;
     }
- 
+
     .header {
         flex-direction: column;
         align-items: center;
@@ -542,19 +546,19 @@ body {
         margin-bottom: 15px;
     }
     .logoutButton {
-        width: 100%; /* Make button full width */
-        max-width: 200px; /* Limit max width */
+        width: 100%;
+        max-width: 200px;
     }
     .controls {
         flex-direction: column;
-        align-items: stretch; /* Stretch items to fill width */
+        align-items: stretch;
         gap: 15px;
         padding: 10px;
     }
     .searchForm {
         flex-direction: column;
         gap: 10px;
-        width: 100%; /* Make form full width */
+        width: 100%;
     }
     .searchInput {
         width: 100%;
@@ -602,7 +606,7 @@ body {
         margin-bottom: 15px;
     }
     .newsGrid {
-        grid-template-columns: 1fr; /* Single column layout for small phones */
+        grid-template-columns: 1fr;
         gap: 15px;
     }
     .newsImage {

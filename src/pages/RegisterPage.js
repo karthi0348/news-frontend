@@ -1,277 +1,332 @@
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import api from '../api/axiosConfig'; // VERIFY THIS PATH IS CORRECT
-import { useNavigate, Link } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import api from "../api/axiosConfig"; 
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const schema = yup.object().shape({
-    userName: yup.string().required('Username is required'),
-    email: yup.string().email('Invalid email').required('Email is required'),
-    password: yup.string().min(8, 'Password must be at least 8 characters').required('Password is required'),
-    firstName: yup.string().required('First Name is required'),
-    lastName: yup.string().required('Last Name is required'),
-    phoneNumber: yup.string().required('Phone Number is required'),
+  userName: yup.string().required("Username is required"),
+  email: yup
+    .string()
+    .matches(
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      "Please enter a valid email address"
+    )
+    .required("Email is required"),
+  password: yup
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      "Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character"
+    )
+    .required("Password is required"),
+  firstName: yup.string().required("First Name is required"),
+  lastName: yup.string().required("Last Name is required"),
+  phoneNumber: yup
+    .string()
+    .matches(/^[0-9]+$/, "Phone number must contain only digits")
+    .min(10, "Phone number must be at least 10 digits")
+    .required("Phone Number is required"),
 });
 
 const RegisterPage = () => {
-    const navigate = useNavigate();
-    const { register, handleSubmit, formState: { errors }, setError } = useForm({
-        resolver: yupResolver(schema),
-    });
+  const navigate = useNavigate();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setError,
+  } = useForm({
+    resolver: yupResolver(schema),
+  });
 
-    // State to manage button loading state
-    const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const onSubmit = async (data) => {
-        setIsLoading(true); // Disable the button on submit
-        try {
-            const response = await api.post('/auth/register/', data);
-            if (response.data.success) { // Ensure your backend sends `success: true`
-                toast.success(response.data.message || 'Registration successful! You can now log in.');
-                // --- CRITICAL CHANGE FOR HISTORY MANAGEMENT (FORM SUBMISSION) ---
-                // After successful registration, navigate to login and REPLACE the /register entry
-                // So, if history was [PageA, /register], it becomes [PageA, /login]
-                // Pressing back from /login will go to PageA, NOT /register
-                setTimeout(() => navigate('/login', { replace: true }), 2000);
-            } else {
-                // Handle cases where backend indicates registration failed without an error status
-                toast.error(response.data.message || 'Registration failed.');
-            }
-        } catch (error) {
-            console.error('Registration error:', error.response?.data);
-            const backendResponse = error.response?.data;
+  const onSubmit = async (data) => {
+    setIsLoading(true); 
+    try {
+      const response = await api.post("/auth/register/", data);
+      if (response.data.success) {
+        toast.success(
+          response.data.message ||
+            "Registration successful! You can now log in."
+        );
 
-            if (backendResponse && backendResponse.errors && Array.isArray(backendResponse.errors)) {
-                backendResponse.errors.forEach(err => {
-                    const fieldMap = {
-                        userName: 'userName',
-                        email: 'email',
-                        phoneNumber: 'phoneNumber',
-                    };
-                    const frontendField = fieldMap[err.field] || err.field;
+        setTimeout(() => navigate("/login", { replace: true }), 2000);
+      } else {
+        toast.error(response.data.message || "Registration failed.");
+      }
+    } catch (error) {
+      console.error("Registration error:", error.response?.data);
+      const backendResponse = error.response?.data;
 
-                    setError(frontendField, {
-                        type: 'server',
-                        message: err.message,
-                    });
-                    toast.error(`${err.field}: ${err.message}`);
-                });
-            } else if (backendResponse && backendResponse.message) {
-                toast.error(backendResponse.message);
-                setError('root.serverError', {
-                    type: 'server',
-                    message: backendResponse.message,
-                });
-            } else {
-                toast.error('An unexpected error occurred during registration. Please try again.');
-            }
-        } finally {
-            setIsLoading(false); // Re-enable the button after response
-        }
-    };
+      if (
+        backendResponse &&
+        backendResponse.errors &&
+        Array.isArray(backendResponse.errors)
+      ) {
+        backendResponse.errors.forEach((err) => {
+          const fieldMap = {
+            userName: "userName",
+            email: "email",
+            phoneNumber: "phoneNumber",
+          };
+          const frontendField = fieldMap[err.field] || err.field;
 
-    return (
-        <div style={styles.outerContainer}>
-            <div style={styles.background}>
-                <div style={styles.containerself}>
-                    <h1 style={styles.heading}>Register</h1>
-                    {errors.root?.serverError && <p style={styles.error}>{errors.root.serverError.message}</p>}
+          setError(frontendField, {
+            type: "server",
+            message: err.message,
+          });
+          toast.error(`${err.field}: ${err.message}`);
+        });
+      } else if (backendResponse && backendResponse.message) {
+        toast.error(backendResponse.message);
+        setError("root.serverError", {
+          type: "server",
+          message: backendResponse.message,
+        });
+      } else {
+        toast.error(
+          "An unexpected error occurred during registration. Please try again."
+        );
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-                    <form onSubmit={handleSubmit(onSubmit)} style={styles.form}>
-                        <div style={styles.inputGroup}>
-                            <label style={styles.label}>Username</label>
-                            <input
-                                type="text"
-                                {...register('userName')}
-                                style={styles.input}
-                            />
-                            {errors.userName && <p style={styles.error}>{errors.userName.message}</p>}
-                        </div>
-                        <div style={styles.inputGroup}>
-                            <label style={styles.label}>Email</label>
-                            <input
-                                type="email"
-                                {...register('email')}
-                                style={styles.input}
-                            />
-                            {errors.email && <p style={styles.error}>{errors.email.message}</p>}
-                        </div>
-                        <div style={styles.inputGroup}>
-                            <label style={styles.label}>Password</label>
-                            <input
-                                type="password"
-                                {...register('password')}
-                                style={styles.input}
-                            />
-                            {errors.password && <p style={styles.error}>{errors.password.message}</p>}
-                        </div>
-                        <div style={styles.inputGroup}>
-                            <label style={styles.label}>First Name</label>
-                            <input
-                                type="text"
-                                {...register('firstName')}
-                                style={styles.input}
-                            />
-                            {errors.firstName && <p style={styles.error}>{errors.firstName.message}</p>}
-                        </div>
-                        <div style={styles.inputGroup}>
-                            <label style={styles.label}>Last Name</label>
-                            <input
-                                type="text"
-                                {...register('lastName')}
-                                style={styles.input}
-                            />
-                            {errors.lastName && <p style={styles.error}>{errors.lastName.message}</p>}
-                        </div>
-                        <div style={styles.inputGroup}>
-                            <label style={styles.label}>Phone Number</label>
-                            <input
-                                type="text"
-                                {...register('phoneNumber')}
-                                style={styles.input}
-                            />
-                            {errors.phoneNumber && <p style={styles.error}>{errors.phoneNumber.message}</p>}
-                        </div>
-                        <button type="submit" style={styles.registerButton} disabled={isLoading}>
-                            {isLoading ? 'Registering...' : 'Register'}
-                        </button>
-                    </form>
-                    <p style={styles.linkText}>
-                        Already have an account?{" "}
-                        {/* --- CRITICAL CHANGE FOR HISTORY MANAGEMENT (LINK) --- */}
-                        {/* When clicking this link, replace the current /register entry in history */}
-                        {/* So, if history was [PageA, /register], clicking this makes it [PageA, /login] */}
-                        {/* Pressing back from /login will go to PageA, NOT /register */}
-                        <Link to="/login" style={styles.link} replace>
-                            Log In
-                        </Link>
-                    </p>
-                </div>
+  return (
+    <div style={styles.outerContainer}>
+      <div style={styles.background}>
+        <div style={styles.containerself}>
+          <h1 style={styles.heading}>Register</h1>
+          {errors.root?.serverError && (
+            <p style={styles.error}>{errors.root.serverError.message}</p>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} style={styles.form}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Username</label>
+              <input
+                type="text"
+                {...register("userName")}
+                style={styles.input}
+              />
+              {errors.userName && (
+                <p style={styles.error}>{errors.userName.message}</p>
+              )}
             </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Email</label>
+              <input type="email" {...register("email")} style={styles.input} />
+              {errors.email && (
+                <p style={styles.error}>{errors.email.message}</p>
+              )}
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Password</label>
+              <input
+                type="password"
+                {...register("password")}
+                style={styles.input}
+              />
+              {errors.password && (
+                <p style={styles.error}>{errors.password.message}</p>
+              )}
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>First Name</label>
+              <input
+                type="text"
+                {...register("firstName")}
+                style={styles.input}
+              />
+              {errors.firstName && (
+                <p style={styles.error}>{errors.firstName.message}</p>
+              )}
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Last Name</label>
+              <input
+                type="text"
+                {...register("lastName")}
+                style={styles.input}
+              />
+              {errors.lastName && (
+                <p style={styles.error}>{errors.lastName.message}</p>
+              )}
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Phone Number</label>
+              <input
+                type="text"
+                {...register("phoneNumber")}
+                style={styles.input}
+                placeholder="Enter 10-digit phone number"
+              />
+              {errors.phoneNumber && (
+                <p style={styles.error}>{errors.phoneNumber.message}</p>
+              )}
+            </div>
+            <button
+              type="submit"
+              style={{
+                ...styles.registerButton,
+                opacity: isLoading ? 0.6 : 1,
+                cursor: isLoading ? "not-allowed" : "pointer",
+              }}
+              disabled={isLoading}
+            >
+              {isLoading ? "Registering..." : "Register"}
+            </button>
+          </form>
+          <p style={styles.linkText}>
+            Already have an account?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/login", { replace: true })}
+              style={{
+                ...styles.link,
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+              }}
+            >
+              Log In
+            </button>
+          </p>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 const styles = {
-    outerContainer: {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        width: '100vw',
-        overflow: 'hidden',
-        backgroundColor: '#f0f2f5',
+  outerContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "100vh",
+    width: "100vw",
+    overflow: "hidden",
+    backgroundColor: "#f0f2f5",
+  },
+  background: {
+    maxWidth: "320px",
+    width: "90%",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "10px",
+    borderRadius: "10px",
+    color: "white",
+    margin: "10px auto",
+    boxSizing: "border-box",
+    flexShrink: 0,
+  },
+  containerself: {
+    width: "100%",
+    padding: "10px",
+    textAlign: "center",
+    flexGrow: 1,
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    minHeight: 0,
+  },
+  heading: {
+    color: "white",
+    fontSize: "24px",
+    fontWeight: "300",
+    marginBottom: "20px",
+    fontFamily: "Arial, sans-serif",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "15px",
+    marginBottom: "15px",
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+  inputGroup: {
+    textAlign: "left",
+  },
+  label: {
+    color: "white",
+    fontSize: "14px",
+    fontWeight: "300",
+    marginBottom: "5px",
+    display: "block",
+  },
+  input: {
+    width: "100%",
+    padding: "0 0 5px 0",
+    background: "transparent",
+    border: "none",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.7)",
+    color: "white",
+    fontSize: "14px",
+    outline: "none",
+    transition: "border-color 0.3s ease",
+  },
+  registerButton: {
+    background: "white",
+    color: "#764ba2",
+    border: "none",
+    padding: "10px 20px",
+    borderRadius: "25px",
+    fontSize: "14px",
+    fontWeight: "500",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    marginTop: "10px",
+    "&:disabled": {
+      opacity: 0.7,
+      cursor: "not-allowed",
     },
-    background: {
-        maxWidth: "320px",
-        width: '90%',
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        display: "flex",
-        flexDirection: 'column',
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "10px",
-        borderRadius: "10px",
-        color: "white",
-        margin: '10px auto',
-        boxSizing: 'border-box',
-        flexShrink: 0,
-    },
-    containerself: {
-        width: "100%",
-        padding: "10px",
-        textAlign: "center",
-        flexGrow: 1,
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        minHeight: 0,
-    },
-    heading: {
-        color: "white",
-        fontSize: "24px",
-        fontWeight: "300",
-        marginBottom: "20px",
-        fontFamily: "Arial, sans-serif",
-    },
-    form: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "15px",
-        marginBottom: "15px",
-        flexGrow: 1,
-        justifyContent: 'center',
-    },
-    inputGroup: {
-        textAlign: "left",
-    },
-    label: {
-        color: "white",
-        fontSize: "14px",
-        fontWeight: "300",
-        marginBottom: "5px",
-        display: "block",
-    },
-    input: {
-        width: "100%",
-        padding: "0 0 5px 0",
-        background: "transparent",
-        border: "none",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.7)",
-        color: "white",
-        fontSize: "14px",
-        outline: "none",
-        transition: "border-color 0.3s ease",
-    },
-    registerButton: {
-        background: "white",
-        color: "#764ba2",
-        border: "none",
-        padding: "10px 20px",
-        borderRadius: "25px",
-        fontSize: "14px",
-        fontWeight: "500",
-        cursor: "pointer",
-        transition: "all 0.3s ease",
-        marginTop: "10px",
-    },
-    linkText: {
-        color: "rgba(255, 255, 255, 0.8)",
-        fontSize: "12px",
-        fontWeight: "300",
-        marginTop: 'auto',
-    },
-    link: {
-        color: "white",
-        textDecoration: "none",
-        fontWeight: "500",
-    },
-    error: {
-        color: "#ff6b6b",
-        background: "rgba(246, 242, 242)",
-        padding: "5px",
-        borderRadius: "5px",
-        fontSize: "11px",
-        textAlign: "center",
-        marginTop: "3px",
-        marginBottom: "10px",
-        border: "1px solid rgba(255, 107, 107, 0.3)",
-        whiteSpace: 'normal',
-        wordBreak: 'break-word',
-    },
-    success: {
-        color: "#6bff6b",
-        background: "rgba(107, 255, 107, 0.1)",
-        padding: "10px",
-        borderRadius: "5px",
-        fontSize: "14px",
-        textAlign: "center",
-        marginBottom: "20px",
-        border: "1px solid rgba(107, 255, 107, 0.3)",
-    }
+  },
+  linkText: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: "12px",
+    fontWeight: "300",
+    marginTop: "auto",
+  },
+  link: {
+    color: "white",
+    textDecoration: "none",
+    fontWeight: "500",
+  },
+  error: {
+    color: "#ff6b6b",
+    background: "rgba(246, 242, 242)", 
+    padding: "5px",
+    borderRadius: "5px",
+    fontSize: "11px",
+    textAlign: "center",
+    marginTop: "3px",
+    marginBottom: "10px",
+    border: "1px solid rgba(255, 107, 107, 0.3)", 
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+  },
+  success: {
+    color: "#6bff6b",
+    background: "rgba(107, 255, 107, 0.1)",
+    padding: "10px",
+    borderRadius: "5px",
+    fontSize: "14px",
+    textAlign: "center",
+    marginBottom: "20px",
+    border: "1px solid rgba(107, 255, 107, 0.3)",
+  },
 };
 
 export default RegisterPage;
