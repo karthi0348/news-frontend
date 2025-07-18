@@ -21,8 +21,7 @@ const MFALoginVerifyPage = () => {
 
     const [isSendingCode, setIsSendingCode] = useState(false);
     const [resendTimer, setResendTimer] = useState(60);
-    const [isVerifying, setIsVerifying] = useState(false); // NEW STATE
-
+    const [isVerifying, setIsVerifying] = useState(false); 
     const {
         register,
         handleSubmit,
@@ -110,7 +109,7 @@ const MFALoginVerifyPage = () => {
     };
 
     const onSubmit = async (data) => {
-        if (isVerifying) return; // Prevent double-click
+        if (isVerifying) return; 
 
         setIsVerifying(true);
         clearErrors();

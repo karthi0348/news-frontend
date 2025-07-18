@@ -16,10 +16,9 @@ const setupSchema = yup.object().shape({
 const MFASetupPage = () => {
     const navigate = useNavigate();
     const { user, isAuthenticated } = useAuth();
-    const [currentStep, setCurrentStep] = useState(1); // 1: Choose method (will be simplified), 2: Setup (Email), 3: Verify
-    const [selectedMethod, setSelectedMethod] = useState('email'); // Default to email as it's the only one
+    const [currentStep, setCurrentStep] = useState(1); 
+    const [selectedMethod, setSelectedMethod] = useState('email'); 
     const [setupToken, setSetupToken] = useState('');
-    // Removed qrCodeUrl and mfaSecret as they are for TOTP
     const [backupCodes, setBackupCodes] = useState([]);
     const [mfaMethods, setMfaMethods] = useState({ available: [], enabled: [], primary: '', hasBackupCodes: false });
 
@@ -28,7 +27,6 @@ const MFASetupPage = () => {
     });
 
     useEffect(() => {
-        // Fetch current MFA status when component mounts
         const fetchMfaStatus = async () => {
             try {
                 const response = await api.get('/auth/mfa/methods/');
@@ -45,18 +43,17 @@ const MFASetupPage = () => {
     }, [isAuthenticated]);
 
 
-    const initiateMfaSetup = async () => { // No 'method' parameter needed now, it's always 'email'
-        // setSelectedMethod('email'); // Already defaulted
+    const initiateMfaSetup = async () => { 
         try {
             const endpoint = '/auth/mfa/email/setup/';
-            const payload = { emailAddress: user.email }; // User's email from AuthContext
+            const payload = { emailAddress: user.email }; 
 
             const response = await api.post(endpoint, payload);
             if (response.data.success) {
-                const { setupToken, expiresIn } = response.data.data; // Removed qrCodeUrl, secret
+                const { setupToken, expiresIn } = response.data.data; 
                 setSetupToken(setupToken);
-                setValue('setupToken', setupToken); // Set value for react-hook-form
-                setCurrentStep(2); // Move to setup/verify step
+                setValue('setupToken', setupToken); 
+                setCurrentStep(2); 
                 toast.info(`MFA setup initiated for Email.`);
             } else {
                 toast.error(response.data.message || 'Failed to initiate MFA setup.');
@@ -69,15 +66,15 @@ const MFASetupPage = () => {
 
     const verifyMfaSetup = async (data) => {
         try {
-            const endpoint = '/auth/mfa/email/verify/'; // Always email verification
+            const endpoint = '/auth/mfa/email/verify/'; 
             
-            const response = await api.post(endpoint, data); // data contains setupToken and verificationCode
+            const response = await api.post(endpoint, data); 
 
             if (response.data.success) {
                 toast.success(response.data.message || 'MFA successfully enabled!');
-                setBackupCodes(response.data.data.backupCodes || []); // Store backup codes
-                setCurrentStep(3); // Show backup codes
-                // Re-fetch MFA status to update UI
+                setBackupCodes(response.data.data.backupCodes || []); 
+                setCurrentStep(3);
+                
                 const statusResponse = await api.get('/auth/mfa/methods/');
                 if (statusResponse.data.success) {
                     setMfaMethods(statusResponse.data.data);
@@ -100,16 +97,14 @@ const MFASetupPage = () => {
         }
 
         try {
-            // Assuming primary method for disabling will be 'email' once setup
             const response = await api.delete('/auth/mfa/disable/', { data: { verificationCode, method: 'email' } });
             if (response.data.success) {
                 toast.success(response.data.message || 'MFA disabled successfully.');
-                 // Re-fetch MFA status to update UI
                 const statusResponse = await api.get('/auth/mfa/methods/');
                 if (statusResponse.data.success) {
                     setMfaMethods(statusResponse.data.data);
                 }
-                setCurrentStep(1); // Back to initial state (no MFA enabled)
+                setCurrentStep(1); 
             } else {
                 toast.error(response.data.message || 'Failed to disable MFA.');
             }
@@ -130,12 +125,10 @@ const MFASetupPage = () => {
                     <p>Enabled methods: {mfaMethods.enabled.join(', ')}</p>
                     <p>Has backup codes: {mfaMethods.hasBackupCodes ? 'Yes' : 'No'}</p>
                     <button onClick={disableMfa} style={{backgroundColor: 'red'}}>Disable MFA</button>
-                    {/* Link to backup code management page */}
                     <p><Link to="/profile">Manage Backup Codes / Regenerate</Link></p>
                 </>
             ) : (
                 <>
-                    {/* Simplified step 1: Directly initiate email setup */}
                     {currentStep === 1 && (
                         <>
                             <h3>Enable Email OTP</h3>
@@ -145,7 +138,7 @@ const MFASetupPage = () => {
                         </>
                     )}
 
-                    {currentStep === 2 && ( // Now only for email
+                    {currentStep === 2 && ( 
                         <>
                             <h3>Verify Email OTP</h3>
                             <p>A verification code has been sent to your email ({user?.email}).</p>

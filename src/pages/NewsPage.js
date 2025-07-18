@@ -10,7 +10,6 @@ function NewsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    // State to hold the *actual* query used for fetching, distinct from the input field
     const [activeSearchQuery, setActiveSearchQuery] = useState('');
     const [category, setCategory] = useState('general');
     const navigate = useNavigate();
@@ -72,15 +71,13 @@ function NewsPage() {
         }
     }, [navigate, isAuthenticated, accessToken, logout]);
 
-    // This useEffect handles initial load and changes to activeSearchQuery or category
     useEffect(() => {
         if (isAuthenticated) {
             fetchNews(activeSearchQuery, category);
         } else {
             navigate('/login');
         }
-    }, [activeSearchQuery, category, isAuthenticated, navigate, fetchNews]); // Added fetchNews to dependencies
-
+    }, [activeSearchQuery, category, isAuthenticated, navigate, fetchNews]); 
     const handleLogout = () => {
         logout();
         toast.info('You have been logged out.');
@@ -89,15 +86,13 @@ function NewsPage() {
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
-        // Update activeSearchQuery when search button is pressed
         setActiveSearchQuery(searchQuery);
     };
 
     const handleCategoryChange = (e) => {
         const newCategory = e.target.value;
         setCategory(newCategory);
-        // Category change should trigger news fetch with current active search query
-        // activeSearchQuery will be used by the useEffect due to its dependency
+
     };
 
     const createNewsId = (newsUrl) => {
@@ -172,7 +167,7 @@ function NewsPage() {
                                                 alt={article.title}
                                                 style={styles.newsImage}
                                                 onError={(e) => {
-                                                    e.target.style.display = 'none'; // Hide broken images
+                                                    e.target.style.display = 'none'; 
                                                 }}
                                             />
                                         )}
