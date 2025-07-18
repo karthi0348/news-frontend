@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Import useEffect
+import React, { useState } from 'react'; 
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -13,7 +13,7 @@ const schema = yup.object().shape({
 });
 
 const LoginPage = () => {
-    const { login, isAuthenticated, loading } = useAuth(); // Destructure loading as well
+    const { login} = useAuth(); 
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -21,31 +21,21 @@ const LoginPage = () => {
         resolver: yupResolver(schema),
     });
 
-    // Effect to redirect if already authenticated
-    useEffect(() => {
-        // Only redirect if authentication status has been determined (not loading)
-        // and the user is authenticated.
-        if (!loading && isAuthenticated) {
-            navigate('/news', { replace: true });
-        }
-    }, [isAuthenticated, loading, navigate]); // Add loading to dependency array
+
 
     const onSubmit = async (data) => {
-        setIsSubmitting(true);
+    setIsSubmitting(true);
+
+    try {
         const result = await login(data.username, data.password);
-        setIsSubmitting(false);
 
         if (result.success) {
-            // Check if MFA is required based on the login result
             if (result.requiresMfa) {
-                // OTP sending logic (which is currently inside LoginPage)
-                // This part could potentially be moved to AuthContext or a separate hook
-                // for cleaner separation of concerns, but for now, it's fine here.
                 const loginToken = localStorage.getItem('loginToken');
                 if (loginToken) {
                     try {
                         await api.post('/auth/auth/mfa/send-otp/', {
-                            loginToken: loginToken,
+                            loginToken,
                             method: 'email',
                         });
                         toast.success('OTP sent to your registered email address.');
@@ -54,16 +44,11 @@ const LoginPage = () => {
                         console.error('Error sending initial OTP:', error);
                         const errorMessage = error.response?.data?.message || 'Failed to send OTP. Please try again.';
                         toast.error(errorMessage);
-                        // Even if OTP send fails, we still navigate to MFA verification page
-                        // as the loginToken is set and MFA is required.
                         navigate('/mfa-login-verify', { replace: true });
                     }
                 } else {
-                     // This case ideally shouldn't happen if requiresMfa is true,
-                     // but as a fallback, if loginToken is somehow missing.
                     toast.error('MFA required but login token not found. Please try logging in again.');
-                    // Optionally, log out or clear any partial state if this happens
-                    // logout(); // if logout is available here or through context
+                    setIsSubmitting(false);
                 }
             } else {
                 toast.success('Login successful!');
@@ -75,15 +60,17 @@ const LoginPage = () => {
             } else {
                 toast.error(result.message || 'Login failed.');
             }
+            setIsSubmitting(false);
         }
-    };
-
-    // If still loading authentication status, you might want to show a loading indicator
-    if (loading) {
-        return <div style={styles.outerContainer}><p>Loading...</p></div>;
+    } catch (error) {
+        toast.error('Unexpected error. Please try again.');
+        console.error(error);
+        setIsSubmitting(false);
     }
+};
 
-    // Render the login form only if not authenticated
+
+
     return (
         <div style={styles.outerContainer}>
             <div style={styles.background}>

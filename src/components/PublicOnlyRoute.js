@@ -3,12 +3,9 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const PublicOnlyRoute = () => {
-    const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated} = useAuth();
 
-    if (loading) {
-        return <div>Loading authentication...</div>;
-    }
-
+ 
     if (isAuthenticated) {
         return <Navigate to="/news" replace />;
     }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext'; 
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -17,12 +17,9 @@ import PrivateRoute from './components/PrivateRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 
 
-const HomeRedirect = () => {
-    const { isAuthenticated, loading } = useAuth(); 
 
-    if (loading) {
-        return <div>Loading...</div>; 
-    }
+const HomeRedirect = () => {
+    const { isAuthenticated } = useAuth();
 
     return isAuthenticated ? <Navigate to="/news" replace /> : <Navigate to="/login" replace />;
 };
@@ -49,11 +46,13 @@ function App() {
                         <Route path="/mfa-setup" element={<MFASetupPage />} />
                     </Route>
 
+                    {/* Default route for home page redirection */}
                     <Route
                         path="/"
                         element={<HomeRedirect />}
                     />
 
+                    {/* Catch-all route for 404 Not Found */}
                     <Route path="*" element={<div>404 Not Found</div>} />
                 </Routes>
                 <ToastContainer
