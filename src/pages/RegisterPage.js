@@ -25,11 +25,11 @@ const schema = yup.object().shape({
     .required("Password is required"),
   firstName: yup.string().required("First Name is required"),
   lastName: yup.string().required("Last Name is required"),
-  phoneNumber: yup
-    .string()
-    .matches(/^[0-9]+$/, "Phone number must contain only digits")
-    .min(10, "Phone number must be at least 10 digits")
-    .required("Phone Number is required"),
+ phoneNumber: yup
+  .string()
+  .matches(/^\d{10}$/, "Phone number must be exactly 10 digits")
+  .required("Phone Number is required"),
+
 });
 
 const RegisterPage = () => {
