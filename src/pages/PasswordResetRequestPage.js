@@ -96,7 +96,6 @@ const PasswordResetRequestPage = () => {
     );
 };
 
-// Styles remain the same, ensure they are defined correctly as they were.
 const styles = {
     outerContainer: {
         display: 'flex',
